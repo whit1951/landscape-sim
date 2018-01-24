@@ -13,17 +13,12 @@ library(randomForest)
 ncores <- parallel::detectCores()
 doParallel::registerDoParallel(ncores)
 
-# setwd("C:/Users/law2y/OneDrive/R Code/IBM/August 2017")
-# merged_data<-read.csv("IBMsummary.csv")
 
 #Load data
-#source('/home/forester/whit1951/IBMsummary.csv')
 merged_data<-read.csv("IBMsummary.csv")
 merged_data<-merged_data[-which(merged_data$beta2==5),] #Take out saturating beta2
 merged_data<-merged_data[which(merged_data$max_I>1),]
 
-# x <- matrix(runif(500), 100)
-# y <- gl(2, 50)
 
 x<-merged_data[,c(3:11)] #covariates
 y<-merged_data[,12] #response variable, duration
