@@ -8,9 +8,9 @@ library(doParallel)
 library(SDMTools)
 
 #load functions
-#source('C:/Users/law2y/OneDrive/R Code/IBM/May 2017/MSI Code/sim_parallel_functions.R')
-source('/home/forester/whit1951/sim_parallel_functions_2017_08_22.R')
+source('.../sim_parallel_functions_2017_08_22.R')
 
+#specify parameters to run
 maxtime<-10000
 nsim<-100
 k<-8 #dimensions of landscape= 2^k+1
