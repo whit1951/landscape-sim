@@ -19,7 +19,8 @@ library(SDMTools)
 ## Load and update summary dataset
 
 ```{r}
-setwd("C:/Users/law2y/OneDrive/R Code/IBM/August 2017")
+#Set working directory to where IBMsummary.csv is located
+#setwd()
 merged_data<-read.csv("IBMsummary.csv")
 merged_data<-merged_data[-which(merged_data$beta2==5),] #remove saturating beta_2 values
 
@@ -40,7 +41,7 @@ merged_data$betas<- factor(merged_data$betas, levels = c("0 0 0", "0 0 -1", "0 1
 merged_data$lstructure<- factor(merged_data$lstructure, levels = c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
 
 #Set working directory of where to produce Figures
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+#setwd()
 ```
 
 ## Define multiplot function
@@ -92,7 +93,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 
 ```
 
-##Figure 1
+## Figure 1
 Representation of neutral landscapes
 ```{r}
 #' Create neutral landscape maps
@@ -283,11 +284,11 @@ dev.off()
 
 ```
 
-##Figure 2
+## Figure 2
 Random forest variable importance results
 ```{r}
 library(randomForest)
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
+#setwd()
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("imp_logit.csv")
@@ -374,7 +375,7 @@ C<-ggplot(imp_logitdur, aes(x=reorder(X, X.IncMSE), y=X.IncMSE)) +
     theme_bw()
 C
 
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+#setwd()
 tiff("Fig2_RF.tif", height =16 , width =8.7, units = "cm", compression = "lzw", res = 300)
 multiplot(A, B, C, cols=1)
 dev.off()
@@ -382,10 +383,10 @@ dev.off()
 ```
 
 
-##Figure 3
+## Figure 3
 Box plots rec rate vs. density
 ```{r}
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+#setwd()
 sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
 
 #tiff("boxplot_prev.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
@@ -418,7 +419,7 @@ dev.off()
 
 ```
 
-##Figure 4
+## Figure 4
 ```{r}
 #percep=3, rec_rate=0.2, density=0.5
 p3r0.2d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.2 & merged_data$density==0.5),]
@@ -449,7 +450,7 @@ multiplot(ii,jj, cols=1)
 dev.off()
 ```
 
-##Figure 4 (log version)
+## Figure 4 (log version)
 ```{r}
 #percep=3, rec_rate=0.2, density=0.5
 p3r0.2d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.2 & merged_data$density==0.5),]
@@ -481,7 +482,7 @@ dev.off()
 ```
 
 
-##Figure 5
+## Figure 5
 ```{r}
 #percep=3, rec_rate=0.1, density=0.5
 p3r0.1d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.1 & merged_data$density==0.5),]
@@ -513,7 +514,7 @@ dev.off()
 ```
 
 
-##Figure 5 (log version)
+## Figure 5 (log version)
 ```{r}
 #percep=3, rec_rate=0.1, density=0.5
 p3r0.1d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.1 & merged_data$density==0.5),]
@@ -544,7 +545,7 @@ multiplot(ii,jj, cols=1)
 dev.off()
 ```
 
-##Figure 6
+## Figure 6
 Comparing effects on landscape structure for a single RSF(\beta_1=6, \beta_2=2, \beta_3=-0.5) for different densities, perceptual distances, and recovery rates.
 ```{r}
 sub_data<-merged_data[which(merged_data$max_I>1),]
@@ -634,7 +635,7 @@ dev.off()
 ```
 
 
-##Supplementary Figure 7
+## Supplementary Figure 2
 Box plot of percep vs. rec rate vs. density
 ```{r}
 sub_data<-merged_data[which(merged_data$max_I>1),]
@@ -665,13 +666,13 @@ hh<- hh + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=ele
 hh
 #dev.off()
 
-tiff("FigureS7.tiff", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
+tiff("FigureS2.tiff", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
 multiplot(gg,hh, cols=1)
 dev.off()
 
 ```
 
-##Supplementary Figure 8 (Heat map)
+## Supplementary Figure 3 (Heat map)
 Heatmap of max prevelance and mean duration for conspecific density=0.5 and comparing rec rates 0.1 and 0.2
 ```{r}
 r2<-merged_data[which(merged_data$rec_rate==0.2 & merged_data$density==0.5),]
@@ -737,12 +738,13 @@ jj<- jj + theme(strip.text.x = element_text(angle = 90))
 jj<- jj + theme(legend.text = element_text(vjust=0.5, size=14), legend.title=element_text(vjust=0.5, size=20))
 jj
 
-tiff("FigureS8_heatmap.tiff", height = 18, width = 14, units = "in", compression = "lzw", res = 300)
+tiff("FigureS3_heatmap.tiff", height = 18, width = 14, units = "in", compression = "lzw", res = 300)
 multiplot(hh,gg, ii,jj, cols=1)
 dev.off()
 ```
 
-#Supplement beta2/beta3
+## Supplementary Figure 1 
+Calibrate beta1/beta2/beta3
 ```{r}
 #Function to calculate rsf
 myrsf=function(x,b1,b2) exp(x*b1+x^2*b2)   #caclulate rsf
