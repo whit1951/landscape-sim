@@ -1,0 +1,871 @@
+---
+title: "Landscape heterogeneity simulation figures"
+author: "Lauren White"
+date: "December 12, 2017"
+output: html_document
+---
+
+## Load packages
+```{r}
+library(doBy)
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(scales)
+library(lsr)
+library(SDMTools)
+```
+
+## Load and update summary dataset
+
+```{r}
+setwd("C:/Users/law2y/OneDrive/R Code/IBM/August 2017")
+merged_data<-read.csv("IBMsummary.csv")
+merged_data<-merged_data[-which(merged_data$beta2==5),] #remove saturating beta_2 values
+
+#Create character strings for landscape structure (Hurst exponent and proportion available habitat)
+merged_data$Hurst<-NA
+merged_data$proportion<-NA
+merged_data$Hurst[which(merged_data$H==0.1)]<-"HP"
+merged_data$Hurst[which(merged_data$H==0.5)]<-"MP"
+merged_data$Hurst[which(merged_data$H==0.9)]<-"LP"
+
+merged_data$proportion[which(merged_data$p==0.25)]<-"L"
+merged_data$proportion[which(merged_data$p==0.5)]<-"M"
+merged_data$proportion[which(merged_data$p==0.75)]<-"H"
+merged_data$lstructure<-paste(merged_data$proportion, merged_data$Hurst, sep="/")
+
+#Order factors
+merged_data$betas<- factor(merged_data$betas, levels = c("0 0 0", "0 0 -1", "0 1 -1", "0 1 -0.5", "0 2 -1", "0 2 -0.5", "3 0 0", "3 0 -1", "3 1 -1", "3 1 -0.5", "3 2 -1", "3 2 -0.5", "6 0 0", "6 0 -1", "6 1 -1", "6 1 -0.5", "6 2 -1", "6 2 -0.5"))
+merged_data$lstructure<- factor(merged_data$lstructure, levels = c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
+
+#Set working directory of where to produce Figures
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+```
+
+## Define multiplot function
+```{r}
+#' Multiplot function
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols), byrow=TRUE)
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+```
+
+##Figure 1
+Representation of neutral landscapes
+```{r}
+#' Create neutral landscape maps
+library(raster)
+
+#' Use standard methods to generate fractal maps. Binary and continuous surfaces may be produced.
+#' 
+#' @param k integer. The extent of the map (2^k+1)^2 pixels
+#' @param h numeric. Level of aggregation in the map.
+#' @param p numeric (0,1). The proportion of map in habitat=1
+#' @param binary logical. If TRUE, a 0/1 categorical landscape is produced.
+#' @author Shannon Pittman, James Forester, modified by Lauren White
+#' @export
+#' @example examples/neutral.landscape_example.R
+fracland_mod <- function(k, h, p, binary = TRUE) {
+  ## Function for creating neutral landscapes Shannon Pittman University of Minnesota May, 2013 k = the extent of the map (2^k+1)^2 pixels h =
+  ## how clumped the map should be (ranging from ?? to ??) -- weird behavior at higher values p = proportion of map in habitat 1 binary =
+  ## plotflag == if TRUE will plot a filled contour version of the matrix
+  
+  ## function call: testmap=land(6,1,.5,FALSE,TRUE)
+  A <- 2^k + 1  # Scalar-determines length of landscape matrix
+  
+  #Right now, as written (1-p) represents the amount of habitat listed as "1"
+  B <- matrix(0, A, A)  # Creates landscape matrix
+  
+  B[1, 1] <- 0
+  B[1, A] <- 0
+  B[A, 1] <- 0
+  B[A, A] <- 0
+  
+  
+  iter <- 1
+  for (iter in 1:k) {
+    scalef <- (0.5 + (1 - h)/2)^(iter)
+    
+    d <- 2^(k - iter)
+    
+    # ALL SQUARE STEPS#
+    for (i in seq(d + 1, A - d, 2 * d)) {
+      for (j in seq(d + 1, A - d, 2 * d)) {
+        B[i, j] <- mean(c(B[i - d, j - d], B[i - d, j + d], B[i + d, j - d], B[i + d, j + d])) + scalef * rnorm(n = 1)
+      }
+    }
+    
+    # OUTSIDE DIAMOND STEP#
+    for (j in seq(d + 1, A - d, 2 * d)) {
+      B[1, j] <- mean(c(B[1, j - d], B[1, j + d], B[1 + d, j])) + scalef * rnorm(n = 1)
+      B[A, j] <- mean(c(B[A, j - d], B[A, j + d], B[A - d, j])) + scalef * rnorm(n = 1)
+    }
+    
+    for (i in seq(d + 1, A - d, 2 * d)) {
+      B[i, 1] <- mean(c(B[i - d, 1], B[i + d, 1], B[i, 1 + d])) + scalef * rnorm(n = 1)
+      B[i, A] <- mean(c(B[i - d, A], B[i + d, A], B[i, A - d])) + scalef * rnorm(n = 1)
+    }
+    
+    # INSIDE DIAMOND STEP#
+    if (2 * d + 1 <= A - 2 * d) {
+      for (i in seq(d + 1, A - d, 2 * d)) {
+        for (j in seq(2 * d + 1, A - 2 * d, 2 * d)) {
+          B[i, j] <- mean(c(B[i - d, j], B[i + d, j], B[i, j - d], B[i, j + d])) + scalef * rnorm(n = 1)
+        }
+      }
+      
+      for (i in seq(2 * d + 1, A - 2 * d, 2 * d)) {
+        for (j in seq(d + 1, A - d, 2 * d)) {
+          B[i, j] <- mean(c(B[i - d, j], B[i + d, j], B[i, j - d], B[i, j + d])) + scalef * rnorm(n = 1)
+        }
+      }
+    }
+    
+    iter <- iter + 1
+  }
+  
+  if (binary == T) {
+    R <- sort(B)
+    PosR <- (1 - p) * length(R)  #larger values become habitat, designated as 1
+    pval <- R[PosR]
+    T1 <- which(B > pval)
+    T2 <- which(B <= pval)
+    B[T1] <- 1  #habitat is 1
+    B[T2] <- 0
+  } 
+  return(B)
+}
+
+landscape<-fracland_mod(k=7, h=0.1, p=0.25)
+map.1 <- raster(landscape)
+one<-spplot(map.1)
+landscape<-fracland_mod(k=7, h=0.1, p=0.5) 
+map.2 <- raster(landscape)
+two<-spplot(map.2)
+landscape<-fracland_mod(k=7, h=0.1, p=0.75)
+map.3 <- raster(landscape)
+three<-spplot(map.3)
+
+landscape<-fracland_mod(k=7, h=0.5, p=0.25) 
+map.4 <- raster(landscape)
+four<-spplot(map.4)
+landscape<-fracland_mod(k=7, h=0.5, p=0.5) 
+map.5 <- raster(landscape)
+five<-spplot(map.5)
+landscape<-fracland_mod(k=7, h=0.5, p=0.75)
+map.6 <- raster(landscape)
+six<-spplot(map.6)
+
+landscape<-fracland_mod(k=7, h=0.9, p=0.25)
+map.7 <- raster(landscape)
+seven<-spplot(map.7)
+landscape<-fracland_mod(k=7, h=0.9, p=0.5)
+map.8 <- raster(landscape)
+eight<-spplot(map.8)
+landscape<-fracland_mod(k=7, h=0.9, p=0.75)
+map.9 <- raster(landscape)
+# nine<-spplot(map.9)
+
+#convert the raster to points for plotting
+H<-rep(0.1, times=length(map.1))
+map.1 <- rasterToPoints(map.1)
+p<-rep(0.25, times=length(map.1))
+df <- data.frame(map.1, H, p)
+
+map.2 <- rasterToPoints(map.2)
+p<-rep(0.5, times=length(map.1))
+df2 <- data.frame(map.2, H, p)
+
+map.3 <- rasterToPoints(map.3)
+p<-rep(0.75, times=length(map.1))
+df3 <- data.frame(map.3, H, p)
+
+H<-rep(0.5, times=length(map.1))
+map.4 <- rasterToPoints(map.4)
+p<-rep(0.25, times=length(map.1))
+df4 <- data.frame(map.4, H, p)
+
+map.5 <- rasterToPoints(map.5)
+p<-rep(0.5, times=length(map.1))
+df5 <- data.frame(map.5, H, p)
+
+map.6 <- rasterToPoints(map.6)
+p<-rep(0.75, times=length(map.1))
+df6 <- data.frame(map.6, H, p)
+
+H<-rep(0.9, times=length(map.1))
+map.7 <- rasterToPoints(map.7)
+p<-rep(0.25, times=length(map.1))
+df7 <- data.frame(map.7, H, p)
+
+map.8 <- rasterToPoints(map.8)
+p<-rep(0.5, times=length(map.1))
+df8 <- data.frame(map.8, H, p)
+
+map.9 <- rasterToPoints(map.9)
+p<-rep(0.75, times=length(map.1))
+df9 <- data.frame(map.9, H, p)
+
+#Make the points a dataframe for ggplot
+
+df <- rbind(df, df2)
+df <- rbind(df, df3)
+df <- rbind(df, df4)
+df <- rbind(df, df5)
+df <- rbind(df, df6)
+df <- rbind(df, df7)
+df <- rbind(df, df8)
+df <- rbind(df, df9)
+
+my_x_title <- expression(paste("Hurst exponent- habitat patchiness (", italic("H"), ")"))
+my_y_title <- expression(paste("Proportion of available habitat (", italic("p"), ")"))
+
+
+#Now make the map
+tiff("Figure1_p_vs_H.tif", height = 8, width = 8, units = "in", compression = "lzw", res = 300)
+ggplot(data=df, aes(y=y, x=x)) +
+  geom_raster(aes(fill=layer)) +
+    theme_bw() +
+  coord_equal() +
+  facet_grid(p~ H) +
+  #scale_fill_viridis(name="Resource quality")+
+  #scale_fill_continuous(colours=c("#0000FFFF","#FFFFFFFF"))+
+  scale_fill_gradient(low="lightgrey", high="darkgreen", guide=FALSE) +
+  #scale_fill_continuous(guide = FALSE) +
+  labs(y=my_y_title, x=my_x_title)+
+  theme(axis.ticks = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank())+
+  theme(axis.title = element_text(face="bold", size=28)) +
+  theme(strip.text = element_text(vjust=0.5, size=24))+ 
+  theme(legend.text = element_text(vjust=0.5, size=24), legend.title=element_text(vjust=0.5, size=28))
+dev.off()
+
+```
+
+##Figure 2
+Random forest variable importance results
+```{r}
+library(randomForest)
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
+
+#Load importance values (not scaled by SD)
+imp_logit<-read.csv("imp_logit.csv")
+imp_logitprev<-read.csv("logit_imp_maxprev.csv")
+imp_logitdur<-read.csv("logit_imp_dur.csv")
+
+logitSD<-read.csv("imp_logitSD.csv")
+logitprevSD<-read.csv("imp_logitprevSD.csv")
+logitdurSD<-read.csv("imp_logitdurSD.csv")
+
+imp_logit$SD<-logitSD$x
+imp_logitprev$SD<-logitprevSD$x
+imp_logitdur$SD<-logitdurSD$x
+
+#Order according to increasing node purity
+imp_logit<-imp_logit[order(imp_logit$IncNodePurity),]
+imp_logitdur<-imp_logitdur[order(imp_logitdur$IncNodePurity),] 
+imp_logitprev<-imp_logitprev[order(imp_logitprev$IncNodePurity),] 
+
+#Remove infection probability (dummy variable--not varied in factorial design)
+imp_logit<- imp_logit[!(imp_logit$X=="inf_prob"),]
+imp_logitdur<- imp_logitdur[!(imp_logitdur$X=="inf_prob"),]
+imp_logitprev<- imp_logitprev[!(imp_logitprev$X=="inf_prob"),]
+
+#In ggplot
+imp_logit<-imp_logit[order(imp_logit$X.IncMSE),] #order according to %increase in MSE
+
+#imp_logit$SD<-rep(0.005, times=nrow(imp_logit))
+A<-ggplot(imp_logit, aes(x=reorder(X, X.IncMSE), y=X.IncMSE)) + 
+    geom_bar(position=position_dodge(), stat="identity",
+             colour="black", # Use black outlines,
+             size=.3) +      # Thinner lines
+    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
+    #               size=.3,    # Thinner lines
+    #               width=.2,
+    #               position=position_dodge(.9)) +
+    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
+    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
+    "percep" = "range")) +
+     #ylab("Mean Decrease in Accuracy (%IncMSE)") +
+    ylab(NULL)+
+    ggtitle("(A)") + #" Variable Importance for Epidemic \nSuccess") +
+    theme(axis.title = element_text(size=10),title=element_text(face="bold", size=10))+
+    coord_flip()+
+    theme_bw()
+A
+
+#imp_logitprev$SD<-rep(0.0000001, times=nrow(imp_logitprev))
+B<-ggplot(imp_logitprev, aes(x=reorder(X, X.IncMSE), y=X.IncMSE)) + 
+    geom_bar(position=position_dodge(), stat="identity",
+             colour="black", # Use black outlines,
+             size=.3) +      # Thinner lines
+    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
+    #               size=.3,    # Thinner lines
+    #               width=.2,
+    #               position=position_dodge(.9)) +
+    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
+    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
+    "percep" = "range")) +
+     #ylab("Mean Decrease in Accuracy (%IncMSE)") +
+    ylab(NULL)+
+    theme(axis.title = element_text(size=10),title=element_text(face="bold", size=10))+
+    ggtitle("(B)") + #" Variable Importance for Maximum \nPrevalence|Success") +
+    coord_flip()+
+    theme_bw()
+B
+
+#imp_logitdur$SD<-rep(100, times=nrow(imp_logitdur))
+C<-ggplot(imp_logitdur, aes(x=reorder(X, X.IncMSE), y=X.IncMSE)) + 
+    geom_bar(position=position_dodge(), stat="identity",
+             colour="black", # Use black outlines,
+             size=.3) +      # Thinner lines
+    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
+    #               size=.3,    # Thinner lines
+    #               width=.2,
+    #               position=position_dodge(.9)) +
+    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
+    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
+    "percep" = "range")) +
+    ylab("Mean Decrease in Accuracy (%IncMSE)") +
+    ggtitle("(C)") + #" Variable Importance for Epidemic \nDuration|Success") +
+    theme(axis.title = element_text(size=10),title=element_text(face="bold", size=10))+
+    coord_flip()+
+    theme_bw()
+C
+
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+tiff("Fig2_RF.tif", height =16 , width =8.7, units = "cm", compression = "lzw", res = 300)
+multiplot(A, B, C, cols=1)
+dev.off()
+
+```
+
+
+##Figure 3
+Box plots rec rate vs. density
+```{r}
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
+
+#tiff("boxplot_prev.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
+gg<- ggplot(data=sub_data, aes(y=max_prevalence, x=as.factor(rec_rate)))
+#gg<- gg+ geom_bar(stat="identity", position=position_dodge(), colour="black")+ facet_grid(Rec.prob. ~ percep, scales= "free_x", labeller=label_both)
+gg<-gg+ geom_boxplot()+ facet_grid(percep ~ density, scales= "free_x", labeller=label_both)
+gg<- gg+ labs(x = expression(Recovery~rate~(gamma)), y = "Maximum prevalence",title="(A)")
+gg<- gg+ theme(axis.title = element_text(size=16),title=element_text(face="bold", size=16))
+gg<- gg + theme(axis.text.x = element_text(vjust=0.5, size=16))
+gg<- gg + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+gg<- gg + theme(strip.text = element_text(vjust=0.5, size=14)) 
+gg
+#dev.off()
+
+#tiff("boxplot_dur.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
+hh<- ggplot(data=sub_data, aes(x=as.factor(rec_rate), y=duration))
+#hh<- hh+ geom_bar(stat="identity", position=position_dodge(), colour="black")+ facet_grid(Rec.prob. ~ percep, scales= "free_x", labeller=label_both)
+hh<-hh+ geom_boxplot()+ facet_grid(percep ~ density, scales= "free_x", labeller=label_both)
+hh<- hh+ labs(fill= "density", x = expression(Recovery~rate~(gamma)), y = "Duration", title="(B)")
+hh<- hh+ theme(axis.title = element_text(face="bold", size=16), title=element_text(face="bold", size=16))
+hh<- hh + theme(axis.text.x = element_text(vjust=0.5, size=16))
+hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+hh<- hh + theme(strip.text = element_text(vjust=0.5, size=14)) 
+hh
+#dev.off()
+
+tiff("Figure3.tif", height = 14, width = 8.7, units = "in", compression = "lzw", res = 300)
+multiplot(gg,hh, cols=1)
+dev.off()
+
+```
+
+##Figure 4
+```{r}
+#percep=3, rec_rate=0.2, density=0.5
+p3r0.2d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.2 & merged_data$density==0.5),]
+ii<- ggplot(data=p3r0.2d0.5, aes(x=betas, y=max_prevalence, fill=as.factor(beta2)))
+ii<- ii+ geom_boxplot()+ facet_grid( p~ H)
+ii<- ii+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "Maximum prevalence", title="(A)", fill= expression(beta[2]))
+ii<- ii+ theme(axis.title = element_text(face="bold", size=20))
+ii<- ii + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+ii<- ii + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+ii
+
+jj<- ggplot(data=p3r0.2d0.5, aes(x=betas, y=duration, fill=as.factor(beta2)))
+jj<- jj+ geom_boxplot()+ facet_grid( p~ H)
+jj<- jj+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "Duration", title="(B)", fill= expression(beta[2]))
+jj<- jj+ theme(axis.title = element_text(face="bold", size=20))
+jj<- jj + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(strip.text = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+jj<- jj + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+jj
+
+tiff("Fig4.tif", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(ii,jj, cols=1)
+dev.off()
+```
+
+##Figure 4 (log version)
+```{r}
+#percep=3, rec_rate=0.2, density=0.5
+p3r0.2d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.2 & merged_data$density==0.5),]
+ii<- ggplot(data=p3r0.2d0.5, aes(x=betas, y=log(max_prevalence), fill=as.factor(beta2)))
+ii<- ii+ geom_boxplot()+ facet_grid( p~ H)
+ii<- ii+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "ln(Maximum prevalence)", title="(A)", fill= expression(beta[2]))
+ii<- ii+ theme(axis.title = element_text(face="bold", size=20))
+ii<- ii + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+ii<- ii + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+ii
+
+jj<- ggplot(data=p3r0.2d0.5, aes(x=betas, y=log(duration), fill=as.factor(beta2)))
+jj<- jj+ geom_boxplot()+ facet_grid( p~ H)
+jj<- jj+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "ln(Duration)", title="(B)", fill= expression(beta[2]))
+jj<- jj+ theme(axis.title = element_text(face="bold", size=20))
+jj<- jj + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(strip.text = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+jj<- jj + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+jj
+
+tiff("Fig4_log.tiff", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(ii,jj, cols=1)
+dev.off()
+```
+
+
+##Figure 5
+```{r}
+#percep=3, rec_rate=0.1, density=0.5
+p3r0.1d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.1 & merged_data$density==0.5),]
+ii<- ggplot(data=p3r0.1d0.5, aes(x=betas, y=max_prevalence,fill=as.factor(beta2)))
+ii<- ii+ geom_boxplot()+ facet_grid( p~ H)
+ii<- ii+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "Maximum prevalence", title="(A)", fill= expression(beta[2]))
+ii<- ii+ theme(axis.title = element_text(face="bold", size=20))
+ii<- ii + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+ii<- ii + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+ii
+
+jj<- ggplot(data=p3r0.1d0.5, aes(x=betas, y=duration, fill=as.factor(beta2)))
+jj<- jj+ geom_boxplot()+ facet_grid( p~ H)
+jj<- jj+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "Duration", title="(B)", fill= expression(beta[2]))
+jj<- jj+ theme(axis.title = element_text(face="bold", size=20))
+jj<- jj + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(strip.text = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+jj<- jj + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+jj
+
+tiff("Fig5.tif", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(ii,jj, cols=1)
+dev.off()
+```
+
+
+##Figure 5 (log version)
+```{r}
+#percep=3, rec_rate=0.1, density=0.5
+p3r0.1d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.1 & merged_data$density==0.5),]
+ii<- ggplot(data=p3r0.1d0.5, aes(x=betas, y=log(max_prevalence),fill=as.factor(beta2)))
+ii<- ii+ geom_boxplot()+ facet_grid( p~ H)
+ii<- ii+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "ln(Maximum prevalence)", title="(A)", fill= expression(beta[2]))
+ii<- ii+ theme(axis.title = element_text(face="bold", size=20))
+ii<- ii + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+ii<- ii + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+ii
+
+jj<- ggplot(data=p3r0.1d0.5, aes(x=betas, y=log(duration), fill=as.factor(beta2)))
+jj<- jj+ geom_boxplot()+ facet_grid( p~ H)
+jj<- jj+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "ln(Duration)", title="(B)", fill= expression(beta[2]))
+jj<- jj+ theme(axis.title = element_text(face="bold", size=20))
+jj<- jj + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=16))
+jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(strip.text = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=18))
+jj<- jj + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
+jj
+
+tiff("Fig5_log.tiff", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(ii,jj, cols=1)
+dev.off()
+```
+
+##Figure 6
+Comparing effects on landscape structure for a single RSF(\beta_1=6, \beta_2=2, \beta_3=-0.5) for different densities, perceptual distances, and recovery rates.
+```{r}
+sub_data<-merged_data[which(merged_data$max_I>1),]
+
+RSF620.5<-sub_data[which(sub_data$betas=="6 2 -0.5"),]
+RSF620.5_rec0.1<-RSF620.5[which(RSF620.5$rec_rate==0.1),]
+RSF620.5_rec0.2<-RSF620.5[which(RSF620.5$rec_rate==0.2),]
+RSF620.5_rec0.4<-RSF620.5[which(RSF620.5$rec_rate==0.4),]
+
+
+#Individual plots of RSF box plot max prevalence and duration
+gg<- ggplot(data=RSF620.5_rec0.2, aes(x=lstructure, y=max_prevalence)) #, fill=covariation)
+gg<- gg+ geom_boxplot(stat="boxplot", position=position_dodge())
+gg<- gg + facet_grid(percep ~ density)
+# gg<-gg +  scale_x_discrete(limits= c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
+gg<- gg+ labs(title="(A)", x = "Landscape structure", y = "Mean maximum \n prevalence")
+#gg<-gg +theme_grey()
+#gg<-gg + theme(plot.title = element_text(hjust = 0.5))
+gg<- gg+ theme(axis.title = element_text(face="bold", size=19))
+gg<- gg + theme(axis.text.x = element_text(angle=90, hjust= 0, vjust=0.5, size=16))
+gg<- gg + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+gg<- gg + theme(strip.text = element_text(vjust=0.5, size=16)) 
+#gg <- gg+ theme(legend.position="none")
+#gg<-gg+  theme( axis.ticks.length=unit(-0.1, "cm")) #, axis.ticks.margin=unit(0.5, "cm"))
+#gg<-gg+ theme(axis.ticks.x=element_blank())
+#gg<-gg +theme (axis.text.x = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")), axis.text.y = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")))
+gg
+
+
+hh<- ggplot(data=RSF620.5_rec0.2, aes(x=lstructure, y=duration)) #, fill=covariation)
+hh<- hh+ geom_boxplot(stat="boxplot", position=position_dodge())
+hh<- hh + facet_grid(percep ~ density)
+# hh<-hh +  scale_x_discrete(limits= c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
+hh<- hh+ labs(title="(B)", x = "Landscape structure", y = "Duration")
+#hh<-hh +theme_grey()
+#hh<-hh + theme(plot.title = element_text(hjust = 0.5))
+hh<- hh+ theme(axis.title = element_text(face="bold", size=19))
+hh<- hh + theme(axis.text.x = element_text(angle=90, hjust= 0, vjust=0.5, size=16))
+hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+hh<- hh + theme(strip.text = element_text(vjust=0.5, size=16)) 
+#hh <- hh+ theme(legend.position="none")
+#hh<-hh+  theme( axis.ticks.length=unit(-0.1, "cm")) #, axis.ticks.margin=unit(0.5, "cm"))
+#hh<-hh+ theme(axis.ticks.x=element_blank())
+#hh<-hh +theme (axis.text.x = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")), axis.text.y = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")))
+hh
+
+#Individual plots of RSF box plot max prevalence and duration
+ii<- ggplot(data=RSF620.5_rec0.1, aes(x=lstructure, y=max_prevalence)) #, fill=covariation)
+ii<- ii+ geom_boxplot(stat="boxplot", position=position_dodge())
+ii<- ii + facet_grid(percep ~ density)
+# ii<-ii +  scale_x_discrete(limits= c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
+ii<- ii+ labs(title="(C)", x = "Landscape structure", y = "Mean maximum \n prevalence")
+#ii<-ii +theme_grey()
+#ii<-ii + theme(plot.title = element_text(hjust = 0.5))
+ii<- ii+ theme(axis.title = element_text(face="bold", size=19))
+ii<- ii + theme(axis.text.x = element_text(angle=90, hjust= 0, vjust=0.5, size=16))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=16)) 
+#ii <- ii+ theme(legend.position="none")
+#ii<-ii+  theme( axis.ticks.length=unit(-0.1, "cm")) #, axis.ticks.margin=unit(0.5, "cm"))
+#ii<-ii+ theme(axis.ticks.x=element_blank())
+#ii<-ii +theme (axis.text.x = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")), axis.text.y = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")))
+ii
+
+
+jj<- ggplot(data=RSF620.5_rec0.1, aes(x=lstructure, y=duration)) #, fill=covariation)
+jj<- jj+ geom_boxplot(stat="boxplot", position=position_dodge())
+jj<- jj + facet_grid(percep ~ density)
+# jj<-jj +  scale_x_discrete(limits= c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
+jj<- jj+ labs(title="(D)", x = "Landscape structure", y = "Duration")
+#jj<-jj +theme_grey()
+#jj<-jj + theme(plot.title = element_text(hjust = 0.5))
+jj<- jj+ theme(axis.title = element_text(face="bold", size=19))
+jj<- jj + theme(axis.text.x = element_text(angle=90, hjust= 0, vjust=0.5, size=16))
+jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(strip.text = element_text(vjust=0.5, size=16)) 
+#jj <- jj+ theme(legend.position="none")
+#jj<-jj+  theme( axis.ticks.length=unit(-0.1, "cm")) #, axis.ticks.margin=unit(0.5, "cm"))
+#jj<-jj+ theme(axis.ticks.x=element_blank())
+#jj<-jj +theme (axis.text.x = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")), axis.text.y = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")))
+jj
+
+tiff("Figure6.tif", height = 12, width = 12, units = "in", compression = "lzw", res = 300)
+multiplot(gg,hh,ii,jj, cols=2)
+dev.off()
+
+```
+
+
+##Supplementary Figure 7
+Box plot of percep vs. rec rate vs. density
+```{r}
+sub_data<-merged_data[which(merged_data$max_I>1),]
+
+#tiff("boxplot_prev.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
+gg<- ggplot(data=merged_data, aes(x=betas, y=max_prevalence, fill=as.factor(density)))
+#gg<- gg+ geom_bar(stat="identity", position=position_dodge(), colour="black")+ facet_grid(Rec.prob. ~ percep, scales= "free_x", labeller=label_both)
+gg<-gg+ geom_boxplot()+ facet_grid(rec_rate ~ percep, scales= "free_x", labeller=label_both)
+gg<- gg+ labs(fill= "density", x = expression(Resource~Selection~Function~(beta[1]~beta[2]~beta[3])), y = "Maximum prevalence",title="(A)")
+gg<- gg+ theme(axis.title = element_text(face="bold", size=20))
+gg<- gg + theme(axis.text.x = element_text(angle=90, vjust=0.5, size=16))
+gg<- gg + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+gg<- gg + theme(strip.text = element_text(vjust=0.5, size=14)) 
+gg<- gg + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=20))
+gg
+#dev.off()
+
+#tiff("boxplot_dur.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
+hh<- ggplot(data=merged_data, aes(x=betas, y=duration, fill=as.factor(density)))
+#hh<- hh+ geom_bar(stat="identity", position=position_dodge(), colour="black")+ facet_grid(Rec.prob. ~ percep, scales= "free_x", labeller=label_both)
+hh<-hh+ geom_boxplot()+ facet_grid(rec_rate ~ percep, scales= "free_x", labeller=label_both)
+hh<- hh+ labs(fill= "density", x = expression(Resource~Selection~Function~(beta[1]~beta[2]~beta[3])), y = "Duration", title="(B)")
+hh<- hh+ theme(axis.title = element_text(face="bold", size=20))
+hh<- hh + theme(axis.text.x = element_text(angle=90, vjust=0.5, size=16))
+hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+hh<- hh + theme(strip.text = element_text(vjust=0.5, size=14)) 
+hh<- hh + theme(legend.text = element_text(vjust=0.5, size=16), legend.title=element_text(vjust=0.5, size=20))
+hh
+#dev.off()
+
+tiff("FigureS7.tiff", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(gg,hh, cols=1)
+dev.off()
+
+```
+
+##Supplementary Figure 8 (Heat map)
+Heatmap of max prevelance and mean duration for conspecific density=0.5 and comparing rec rates 0.1 and 0.2
+```{r}
+r2<-merged_data[which(merged_data$rec_rate==0.2 & merged_data$density==0.5),]
+
+sdf <- summaryBy(duration~ H + betas +p+ percep, data=r2, FUN=mean)
+gg <- ggplot(sdf, aes(x=as.factor(p), y=as.factor(H), fill=duration.mean))
+gg <- gg + geom_tile(color="white", size=0.1)
+gg <- gg + scale_fill_viridis(name="Duration")
+gg <- gg + coord_equal()
+gg <- gg + facet_grid(percep ~ betas)
+gg<- gg+ labs(x="Proportion of available habitat (p)", y="Hurst exponent (H)", title= "(B)")
+gg<- gg+ theme(axis.title = element_text(face="bold", size=24))
+gg<- gg + theme(axis.text.x = element_text(angle=90, hjust=0, vjust=0.5, size=16))
+gg<- gg + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+gg<- gg + theme(strip.text = element_text(vjust=0.5, size=18)) 
+gg<- gg + theme(strip.text.x = element_text(angle = 90))
+gg<- gg + theme(legend.text = element_text(vjust=0.5, size=14), legend.title=element_text(vjust=0.5, size=20))
+gg
+
+sdf <- summaryBy(max_prevalence~ H + betas +p+ percep, data=r2, FUN=mean)
+hh <- ggplot(sdf, aes(x=as.factor(p), y=as.factor(H), fill=max_prevalence.mean))
+hh <- hh + geom_tile(color="white", size=0.1)
+hh <- hh + scale_fill_viridis(name="Mean \nmaximum \nprevalence")
+hh <- hh + coord_equal()
+hh <- hh + facet_grid(percep ~ betas)
+hh<- hh+ labs(x="Proportion of available habitat (p)", y="Hurst exponent (H)", title="(A)")
+hh<- hh+ theme(axis.title = element_text(face="bold", size=24))
+hh<- hh + theme(axis.text.x = element_text(angle=90, hjust=0, vjust=0.5, size=16))
+hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+hh<- hh + theme(strip.text = element_text(vjust=0.5, size=18)) 
+hh<- hh + theme(strip.text.x = element_text(angle = 90))
+hh<- hh + theme(legend.text = element_text(vjust=0.5, size=14), legend.title=element_text(vjust=0.5, size=20))
+hh
+
+r1<-merged_data[which(merged_data$rec_rate==0.1 & merged_data$density==0.5),]
+sdf <- summaryBy(max_prevalence~ H + betas +p+ percep, data=r1, FUN=mean)
+ii <- ggplot(sdf, aes(x=as.factor(p), y=as.factor(H), fill=max_prevalence.mean))
+ii <- ii + geom_tile(color="white", size=0.1)
+ii <- ii + scale_fill_viridis(name="Mean \nmaximum \nprevalence")
+ii <- ii + coord_equal()
+ii <- ii + facet_grid(percep ~ betas)
+ii<- ii+ labs(x="Proportion of available habitat (p)", y="Hurst exponent (H)", title="(C)")
+ii<- ii+ theme(axis.title = element_text(face="bold", size=24))
+ii<- ii + theme(axis.text.x = element_text(angle=90, hjust=0, vjust=0.5, size=16))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=18)) 
+ii<- ii + theme(strip.text.x = element_text(angle = 90))
+ii<- ii + theme(legend.text = element_text(vjust=0.5, size=14), legend.title=element_text(vjust=0.5, size=20))
+ii
+
+sdf <- summaryBy(duration~ H + betas +p+ percep, data=r1, FUN=mean)
+jj <- ggplot(sdf, aes(x=as.factor(p), y=as.factor(H), fill=duration.mean))
+jj <- jj + geom_tile(color="white", size=0.1)
+jj <- jj + scale_fill_viridis(name="Duration")
+jj <- jj + coord_equal()
+jj <- jj + facet_grid(percep ~ betas)
+jj<- jj+ labs(x="Proportion of available habitat (p)", y="Hurst exponent (H)", title="(D)")
+jj<- jj+ theme(axis.title = element_text(face="bold", size=24))
+jj<- jj + theme(axis.text.x = element_text(angle=90, hjust=0, vjust=0.5, size=16))
+jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+jj<- jj + theme(strip.text = element_text(vjust=0.5, size=18)) 
+jj<- jj + theme(strip.text.x = element_text(angle = 90))
+jj<- jj + theme(legend.text = element_text(vjust=0.5, size=14), legend.title=element_text(vjust=0.5, size=20))
+jj
+
+tiff("FigureS8_heatmap.tiff", height = 18, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(hh,gg, ii,jj, cols=1)
+dev.off()
+```
+
+#Supplement beta2/beta3
+```{r}
+#Function to calculate rsf
+myrsf=function(x,b1,b2) exp(x*b1+x^2*b2)   #caclulate rsf
+
+#Function to calculate probability of selecting a given cell relative to other cells
+#' @param x= \delta N
+#' @param x.1= baseline population size of individuals
+#' @param b2= \beta2 
+#' @param b3= \beta3 (quadratic coefficient for RSF)
+#' @param ncells= number of cells in neighborhood (e.g., 9, 25, 49)
+myprsf=function(x,x.1,b2,b3,ncells)  #calculates rsf value for each cell; ncells= number of cells
+{ lowlocs=myrsf(x.1,b2,b3)*(ncells-1)  #x = delta n
+hiloc=myrsf(x+x.1,b2,b3)    
+phi=hiloc/(hiloc+lowlocs)} 
+
+
+
+##beta2= 0, beta3=0
+A <- ggplot(data.frame(x = c(0, 6)), aes(x = x)) +
+  stat_function(fun = myprsf, args = list(0, 0, 0, 9),
+                aes(linetype = "N=0")) +
+  stat_function(fun =  myprsf, args = list(2, 0, 0, 9),
+                aes(linetype = "N=2")) +
+  stat_function(fun =  myprsf, args = list(4, 0, 0, 9),
+                aes(linetype = "N=4")) +
+  scale_x_continuous(name = expression(paste(Delta, "N")),
+                     breaks = seq(0, 6, 1),
+                     limits=c(0, 6)) +
+  geom_hline(yintercept = 1/9, colour="red") + 
+  scale_y_continuous(name = expression(paste("Probability of selecting cell with ", Delta, "N individuals")), limits=c(0,0.5)) +
+  ggtitle(expression(paste("(A) ", beta[2], "= 0 & ", beta[3], "= 0 (Random)"))) +
+  scale_linetype_manual("Initial \npopulation \nsize", values = c("solid", "dashed", "dotted"))
+A
+
+##beta2= 0, beta3=-1
+B <- ggplot(data.frame(x = c(0, 6)), aes(x = x)) +
+  stat_function(fun = myprsf, args = list(0, 0, -1, 9),
+                aes(linetype = "N=0")) +
+  stat_function(fun =  myprsf, args = list(2, 0, -1, 9),
+                aes(linetype = "N=2")) +
+  stat_function(fun =  myprsf, args = list(4, 0, -1, 9),
+                aes(linetype = "N=4")) +
+  scale_x_continuous(name = expression(paste(Delta, "N")),
+                     breaks = seq(0, 6, 1),
+                     limits=c(0, 6)) +
+  geom_hline(yintercept = 1/9, colour="red") + 
+  scale_y_continuous(name = expression(paste("Probability of selecting cell with ", Delta, "N individuals")), limits=c(0,0.5)) +
+  ggtitle(expression(paste("(B) ", beta[2], "= 0 & ", beta[3], "= -1 (Negative)"))) +
+  scale_linetype_manual("Initial \npopulation \nsize", values = c("solid", "dashed", "dotted"))
+B
+
+
+
+##beta2= 1, beta3=-1
+C <- ggplot(data.frame(x = c(0, 6)), aes(x = x)) +
+  stat_function(fun = myprsf, args = list(0, 1, -1, 9),
+                aes(linetype = "N=0")) +
+  stat_function(fun =  myprsf, args = list(2, 1, -1, 9),
+                aes(linetype = "N=2")) +
+  stat_function(fun =  myprsf, args = list(4, 1, -1, 9),
+                aes(linetype = "N=4")) +
+  scale_x_continuous(name = expression(paste(Delta, "N")),
+                     breaks = seq(0, 6, 1),
+                     limits=c(0, 6)) +
+  geom_hline(yintercept = 1/9, colour="red") + 
+  scale_y_continuous(name = expression(paste("Probability of selecting cell with ", Delta, "N individuals")), limits=c(0,0.5)) +
+  ggtitle(expression(paste("(C) ", beta[2], "= 1 & ", beta[3], "=-1 (Positive)"))) +
+  scale_linetype_manual("Initial \npopulation \nsize", values = c("solid", "dashed", "dotted"))
+C
+
+##beta2= 0, beta3=0
+D <- ggplot(data.frame(x = c(0, 6)), aes(x = x)) +
+  stat_function(fun = myprsf, args = list(0, 1, -0.5, 9),
+                aes(linetype = "N=0")) +
+  stat_function(fun =  myprsf, args = list(2, 1, -0.5, 9),
+                aes(linetype = "N=2")) +
+  stat_function(fun =  myprsf, args = list(4, 1, -0.5, 9),
+                aes(linetype = "N=4")) +
+  scale_x_continuous(name = expression(paste(Delta, "N")),
+                     breaks = seq(0, 6, 1),
+                     limits=c(0, 6)) +
+  geom_hline(yintercept = 1/9, colour="red") + 
+  scale_y_continuous(name = expression(paste("Probability of selecting cell with ", Delta, "N individuals")), limits=c(0,0.5)) +
+  ggtitle(expression(paste("(D) ", beta[2], "= 1 & ", beta[3], "= -0.5 (Positive)"))) +
+  scale_linetype_manual("Initial \npopulation \nsize", values = c("solid", "dashed", "dotted"))
+D
+
+##beta2= 2, beta3=-1
+E <- ggplot(data.frame(x = c(0, 6)), aes(x = x)) +
+  stat_function(fun = myprsf, args = list(0, 2, -1, 9),
+                aes(linetype = "N=0")) +
+  stat_function(fun =  myprsf, args = list(2, 2, -1, 9),
+                aes(linetype = "N=2")) +
+  stat_function(fun =  myprsf, args = list(4, 2, -1, 9),
+                aes(linetype = "N=4")) +
+  scale_x_continuous(name = expression(paste(Delta, "N")),
+                     breaks = seq(0, 6, 1),
+                     limits=c(0, 6)) +
+  geom_hline(yintercept = 1/9, colour="red") + 
+  scale_y_continuous(name = expression(paste("Probability of selecting cell with ", Delta, "N individuals")), limits=c(0,0.5)) +
+  ggtitle(expression(paste("(E) ", beta[2], "= 2 & ", beta[3], "=-1 (Positive)"))) +
+  scale_linetype_manual("Initial \npopulation \nsize", values = c("solid", "dashed", "dotted"))
+E
+
+##beta2= 2, beta3=-0.5
+F <- ggplot(data.frame(x = c(0, 6)), aes(x = x)) +
+  stat_function(fun = myprsf, args = list(0, 2, -0.5, 9),
+                aes(linetype = "N=0")) +
+  stat_function(fun =  myprsf, args = list(2, 2, -0.5, 9),
+                aes(linetype = "N=2")) +
+  stat_function(fun =  myprsf, args = list(4, 2, -0.5, 9),
+                aes(linetype = "N=4")) +
+  scale_x_continuous(name = expression(paste(Delta, "N")),
+                     breaks = seq(0, 6, 1),
+                     limits=c(0, 6)) +
+  geom_hline(yintercept = 1/9, colour="red") + 
+  scale_y_continuous(name = expression(paste("Probability of selecting cell with ", Delta, "N individuals")), limits=c(0,0.5)) +
+  ggtitle(expression(paste("(F) ", beta[2], "= 2 & ", beta[3], "=-0.5 (Positive)"))) +
+  scale_linetype_manual("Initial \npopulation \nsize", values = c("solid", "dashed", "dotted"))
+F
+
+tiff("RSF_conspecifics.tiff", height = 18, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(A,B,C,D,E,F, cols=2)
+dev.off()
+```
+
