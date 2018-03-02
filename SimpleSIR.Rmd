@@ -1,0 +1,385 @@
+---
+title: "Simple SIR"
+author: "Lauren White"
+date: "February 24, 2018"
+output: html_document
+---
+
+Deterministic and more simplistic stochastic SIR models for conspecific density vs. rec. rate combinations tested in spatially-explicit model
+
+#Load libraries
+
+```{r setup}
+library(deSolve)
+```
+
+## Deterministic SIR Model
+Code adapted from: <http://sbfnk.github.io/chennai-modelling/intro_to_r_gk.html>
+```{r}
+par(mfrow=c(1,1))
+k<-8
+dim<-2^k + 1
+density<-0.25
+n.initial <- round(density*dim^2) # inital population size
+
+init <- c(S = n.initial-1, I = 1, R = 0)
+times <- seq(0, 1000, by = 1) #1000 time steps
+
+freq_sir <- function(time, state, parameters) {
+    with(as.list(c(state, parameters)), {
+        dS = -beta * S * I/16512  # The change in S 
+        dI = beta * S * I/16512 - gamma * I
+        dR = gamma * I
+        return(list(c(dS, dI, dR))) 
+    })
+}
+
+density_sir <- function(time, state, parameters) {
+    with(as.list(c(state, parameters)), {
+        dS = -beta * S * I/257  # The change in S 
+        dI = beta * S * I/257 - gamma * I
+        dR = gamma * I
+        return(list(c(dS, dI, dR))) 
+    })
+}
+
+
+parameters <- c(beta = 0.2, gamma = 0.4)
+
+out_freq <- ode(y = init, func = freq_sir, times = times, parms = parameters)
+out_density <- ode(y = init, func = density_sir, times = times, parms = parameters)
+
+plot(out_freq[, "time"], out_freq[, "I"]/n.initial, type = "l", lwd = 10, col = "green", xlab = "Time", 
+    ylab = "Prevalence")
+lines(out_density[, "time"], out_density[, "I"]/n.initial, col="red")
+# lines(out[, "time"], out[, "R"], col = "blue", lwd = 10)
+#legend("bottomright", c("Susceptibles", "Infecteds", "Recovereds"), lwd = 10, lty = 1, 
+#    col = 2:4)  # Add legend and specific position
+
+
+```
+
+## Stochastic SIR Model 
+
+```{r}
+#' Function to randomly generate individuals and randomly assign 'nI' number of infected
+#' individuals at t=0
+#' @param n.initial- the number of desired individuals to start with
+#' @param nI- the number of infected individuals to start with at t=0
+#' @author Lauren White
+make.inds <- function(n.initial, nI){
+  id<-1:n.initial
+  I<-sample(1:n.initial, nI)
+  status<-rep("S", times=n.initial)
+  status[I]<-"I"
+  inds <- data.frame(id = id, status=status, stringsAsFactors=FALSE) 
+  inds
+}
+
+#' Function that determines whether not a transmission event occurs
+#' First checks to see if there are any individuals + infected infividuals present in the same cell
+#' Then calculates final transmission probability based on # of infected individuals present
+#' @param inds- dataframe with individual traits, including infection status
+#' @param transProb- per interaction transmissioin probability
+#' @author Lauren White
+#' @date February 24, 2018
+#' 
+infection_simple<-function(inds, transProb){
+    s_inds<-which(inds$status=="S" ) #which individuals are currently infected?
+    if (length(s_inds>0)){
+      i_count<-which(inds$status=="I" ) #which individuals are currently infected?
+      finalProb <- 1 - (1 - transProb)^i_count
+      transmit <- rbinom(length(s_inds), 1, finalProb)
+      new_i<-s_inds[which(transmit == 1)]
+      inds$status[new_i]<-"I"
+  } 
+  return(inds)
+}
+
+#############################################################################################
+#############################################################################################
+
+#' Function that allows infected individuals to recover at rate 'gamma'
+#' @param inds: the dataframe describing the current status and location of individuals in the simulation
+#' @param gamma: the recovery rate
+#' @author Lauren White
+recover.inds<-function(inds, gamma){
+  infected<-which(inds$status=="I" ) #which individuals are currently infected?
+  if(length(infected>0)){
+    rec.prob<-runif(length(infected), min=0, max=1)
+    for (i in 1:length(infected)){
+      if(rec.prob[i]<= gamma){
+        inds$status[infected[i]]<-"R"
+      }
+    }
+  }
+  return(inds)
+}
+
+
+SIR_simple_function<-function(maxtime, nsim, k, density, inf_prob, rec_rate){
+  #Set up initial conditions for all simulations
+  dim<-2^k + 1
+  n.initial <- round(density*dim^2) # inital population size
+
+  ##Initiate data structure across simulations
+  mydata<-list(inds=NULL, N=NULL, infdat=NULL)
+  filename<-paste("k", k, "dens", density, "inf", inf_prob, "rec", rec_rate, sep="")
+  summary<-data.frame(k=rep(k, times=nsim), density=rep(density, times=nsim), inf_prob=rep(inf_prob, times=nsim), rec_rate=rep(rec_rate, times=nsim), duration=NaN, max_I=NaN, max_prevalence=NaN)
+  infected<-matrix(NaN, nrow=maxtime, ncol=nsim)
+
+ 
+  #Iterate for 'nsim' number of simulations per given parameter set
+  for(count in 1:nsim){
+    ##Initiate individuals
+    inds <- make.inds(n.initial=n.initial, nI=1)
+    mydata$inds[[count]]<-inds
+   
+    #Initiate longterm storage for infection data
+    infdat<-inds$status
+    
+    # Object for storing results for single simulation (disease dynamics through time)
+    N <-data.frame(S=NaN, I=NaN, R=NaN)
+    N[1,] <- c(sum(inds$status=="S"), sum(inds$status=="I"), sum(inds$status=="R"))
+    
+    ##Run the simulation for a max of 'T' timesteps
+    for(t in 2:maxtime){
+      
+      #Disease process(es)
+      inds<-infection_simple(inds, transProb=inf_prob)
+      inds<-recover.inds(inds, gamma=rec_rate)
+      
+      #Update disease status lists
+      infdat<-cbind(infdat,inds$status)
+      N[t,] <- c(sum(inds$status=="S"), sum(inds$status=="I"), sum(inds$status=="R"))
+      if(sum(inds$status=="I")==0){ #If number of infected in individuals--> 0, stop running
+        summary$duration[count]<-t-1
+        for (i in t:maxtime){
+          N[i,]<-N[t,] #automatically fill remaining time slots with current N values
+        }
+        break
+      }
+    }
+    mydata$N[[count]]<-N
+    mydata$infdat[[count]]<-infdat
+    summary$max_I[count]<-max(N$I)
+    summary$max_prevalence[count]<-max(N$I)/n.initial
+    infected[,count]<-N$I
+    print(count)
+  }
+  #Record output
+  write.csv(summary,file=paste(filename,"summary.csv", sep="_"))
+  write.csv(infected,file=paste(filename,"infected.csv", sep="_"))
+}
+  
+
+# tic=Sys.time()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
+
+#SIR_simple_function<-function(maxtime, nsim, k, density, inf_prob, rec_rate)
+SIR_simple_function(1000, 100, 8, 0.25, 0.2, 0.1)
+SIR_simple_function(1000, 100, 8, 0.25, 0.2, 0.2)
+SIR_simple_function(1000, 100, 8, 0.25, 0.2, 0.4)
+SIR_simple_function(1000, 100, 8, 0.5, 0.2, 0.1)
+SIR_simple_function(1000, 100, 8, 0.5, 0.2, 0.2)
+SIR_simple_function(1000, 100, 8, 0.5, 0.2, 0.4)
+
+# print(difftime(Sys.time(),tic,units="mins"))
+
+```
+Plot deterministic and stochastic SIR results (assuming equal mixing)
+```{r}
+par(mfrow=c(2, 3))
+k<-8
+dim<-2^k + 1
+density<-0.25
+n.initial25 <- round(density*dim^2) # inital population size
+
+density<-0.5
+n.initial50 <- round(density*dim^2) # inital population size
+
+#Density=0.25
+init <- c(S = n.initial25-1, I = 1, R = 0)
+times <- seq(0, 100, by = 1) #1000 time steps
+
+stoch<-read.csv("k8dens0.25inf0.2rec0.1_infected.csv")
+out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.1))
+head(out)
+
+plot(out[, "time"], out[, "I"]/n.initial25, type = "l", lwd = 10, col = "green", xlab = "Time", 
+    ylab = "Prevalence")
+for(i in 1:(dim(stoch)[2]-1)){
+lines(stoch$X, stoch[,i+1]/n.initial25, col = "red", lwd = 1)
+}
+title("density=0.25;beta=0.2;gamma=0.1")
+
+
+stoch<-read.csv("k8dens0.25inf0.2rec0.2_infected.csv")
+out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.2))
+head(out)
+
+plot(out[, "time"], out[, "I"]/n.initial25, type = "l", lwd = 10, col = "green", xlab = "Time", 
+    ylab = "Prevalence")
+for(i in 1:(dim(stoch)[2]-1)){
+lines(stoch$X, stoch[,i+1]/n.initial25, col = "red", lwd = 1)
+}
+title("density=0.25;beta=0.2;gamma=0.2")
+
+stoch<-read.csv("k8dens0.25inf0.2rec0.4_infected.csv")
+out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.4))
+head(out)
+
+plot(out[, "time"], out[, "I"]/n.initial25, type = "l", lwd = 10, col = "green", xlab = "Time", 
+    ylab = "Prevalence")
+for(i in 1:(dim(stoch)[2]-1)){
+  lines(stoch$X, stoch[,i+1]/n.initial25, col = "red", lwd = 1)
+}
+title("density=0.25;beta=0.2;gamma=0.4")
+
+#Density=0.50
+init <- c(S = n.initial50-1, I = 1, R = 0)
+times <- seq(0, 100, by = 1) #1000 time steps
+
+stoch<-read.csv("k8dens0.5inf0.2rec0.1_infected.csv")
+out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.1))
+head(out)
+
+plot(out[, "time"], out[, "I"]/n.initial50, type = "l", lwd = 10, col = "green", xlab = "Time", 
+    ylab = "Prevalence")
+for(i in 1:(dim(stoch)[2]-1)){
+lines(stoch$X, stoch[,i+1]/n.initial50, col = "red", lwd = 1)
+}
+title("density=0.5;beta=0.2;gamma=0.1")
+
+
+stoch<-read.csv("k8dens0.5inf0.2rec0.2_infected.csv")
+out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.2))
+head(out)
+
+plot(out[, "time"], out[, "I"]/n.initial50, type = "l", lwd = 10, col = "green", xlab = "Time", 
+    ylab = "Prevalence")
+for(i in 1:(dim(stoch)[2]-1)){
+lines(stoch$X, stoch[,i+1]/n.initial50, col = "red", lwd = 1)
+}
+title("density=0.5;beta=0.2;gamma=0.2")
+
+stoch<-read.csv("k8dens0.5inf0.2rec0.4_infected.csv")
+out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.4))
+head(out)
+
+plot(out[, "time"], out[, "I"]/n.initial50, type = "l", lwd = 10, col = "green", xlab = "Time", 
+    ylab = "Prevalence")
+for(i in 1:(dim(stoch)[2]-1)){
+  lines(stoch$X, stoch[,i+1]/n.initial50, col = "red", lwd = 1)
+}
+title("density=0.5;beta=0.2;gamma=0.4")
+```
+
+
+##Combine simulation ouput
+```{r}
+library(doBy)
+library(ggplot2)
+library(viridis)
+library(ggthemes)
+library(scales)
+library(lsr)
+
+##Read in file names 
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
+filenames <- list.files(path = "C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
+summaries<-filenames[grep("summary", filenames)] #summary data
+infecteds<-filenames[grep("infect", filenames)] #I data
+
+##Make a merged dataset from all available .csv files
+SIRdata_merged<- do.call("rbind", lapply(summaries, read.csv, header = TRUE))
+#setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/")
+
+```
+
+
+##Box plots
+Box plots comparing density and recovery rates
+```{r}
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+#sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
+
+#tiff("boxplot_prev.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
+gg<- ggplot(data=SIRdata_merged, aes(y=max_prevalence, x=as.factor(rec_rate)))
+#gg<- gg+ geom_bar(stat="identity", position=position_dodge(), colour="black")+ facet_grid(Rec.prob. ~ percep, scales= "free_x", labeller=label_both)
+gg<-gg+ geom_boxplot()+ facet_grid(. ~ density, scales= "free_x", labeller=label_both)
+gg<- gg+ labs(x = expression(Recovery~rate~(gamma)), y = "Maximum prevalence",title="(A)")
+gg<- gg+ theme(axis.title = element_text(size=16),title=element_text(face="bold", size=16))
+gg<- gg + theme(axis.text.x = element_text(vjust=0.5, size=16))
+gg<- gg + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+gg<- gg + theme(strip.text = element_text(vjust=0.5, size=14)) 
+gg
+#dev.off()
+
+means <- aggregate(duration ~ density+ rec_rate, SIRdata_merged, mean)
+#tiff("boxplot_dur.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
+hh<- ggplot(data=SIRdata_merged, aes(x=as.factor(rec_rate), y=duration))
+#hh<- hh+ geom_bar(stat="identity", position=position_dodge(), colour="black")+ facet_grid(Rec.prob. ~ percep, scales= "free_x", labeller=label_both)
+hh<-hh+ geom_boxplot()+ facet_grid(. ~ density, scales= "free_x", labeller=label_both)
+hh<- hh+ labs(fill= "density", x = expression(Recovery~rate~(gamma)), y = "Duration", title="(B)")
+hh<- hh+ theme(axis.title = element_text(face="bold", size=16), title=element_text(face="bold", size=16))
+hh<- hh + theme(axis.text.x = element_text(vjust=0.5, size=16))
+hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+hh<- hh + theme(strip.text = element_text(vjust=0.5, size=14))
+hh<- hh + stat_summary(fun.y=mean, colour="darkred", geom="point", 
+                           shape=18, size=3,show_guide = FALSE)
+hh<-hh + geom_text(data = means , aes(label = duration, y = duration + 0.08))
+hh
+#dev.off()
+
+tiff("DDtransmission.tif", height = 14, width = 8.7, units = "in", compression = "lzw", res = 300)
+multiplot(gg,hh, cols=1)
+dev.off()
+
+```
+
+##Box plot
+Compare homogenous mixing and spatial models
+```{r}
+SIRdata_merged$percep<-"Homogenous"
+SIRdata_merged$p<-NA
+SIRdata_merged$H<-NA
+SIRdata_merged$beta1<-NA
+SIRdata_merged$beta2<-NA
+SIRdata_merged$beta3<-NA
+SIRdata_merged$betas<-NA
+SIRdata_merged$pbyH<-NA
+SIRdata_merged$Hurst<-NA
+SIRdata_merged$proportion<-NA
+SIRdata_merged$lstructure<-NA
+
+h_vs_s <-rbind(sub_data, SIRdata_merged)
+hh <- ggplot(h_vs_s, aes(x = as.factor(rec_rate), y = max_prevalence, fill = percep))
+hh<-hh+ geom_boxplot()+ facet_grid(. ~ density, scales= "free_x", labeller=label_both)
+hh<- hh+ labs(fill= "Perceptual \ndistance", x = expression(Recovery~rate~(gamma)), y = "Maximum prevalence", title="(A)")
+hh<- hh+ theme(axis.title = element_text(face="bold", size=16), title=element_text(face="bold", size=16))
+hh<- hh + theme(axis.text.x = element_text(vjust=0.5, size=16))
+hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+hh<- hh + theme(strip.text = element_text(vjust=0.5, size=14))
+#hh<- hh + stat_summary(fun.y=mean, colour="darkred", geom="point", 
+                           #shape=18, size=3,show_guide = FALSE)
+#hh<-hh + geom_text(data = means , aes(label = duration, y = duration + 0.08))
+hh
+
+ii <- ggplot(h_vs_s, aes(x = as.factor(rec_rate), y = duration, fill = percep))
+ii<-ii+ geom_boxplot()+ facet_grid(. ~ density, scales= "free_x", labeller=label_both)
+ii<- ii+ labs(fill= "Perceptual \ndistance", x = expression(Recovery~rate~(gamma)), y = "Duration", title="(B)")
+ii<- ii+ theme(axis.title = element_text(face="bold", size=16), title=element_text(face="bold", size=16))
+ii<- ii + theme(axis.text.x = element_text(vjust=0.5, size=16))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=14))
+#ii<- ii + stat_summary(fun.y=mean, colour="darkred", geom="point", 
+                           #shape=18, size=3,show_guide = FALSE)
+#ii<-ii + geom_text(data = means , aes(label = duration, y = duration + 0.08))
+ii
+
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
+tiff("Compare_homog_spatial.tif", height = 8, width = 14, units = "in", compression = "lzw", res = 300)
+multiplot(hh,ii, cols=2)
+dev.off()
+```
