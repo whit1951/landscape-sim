@@ -5,12 +5,14 @@ date: "February 24, 2018"
 output: html_document
 ---
 
-Deterministic and more simplistic stochastic SIR models for conspecific density vs. rec. rate combinations tested in spatially-explicit model
+Deterministic and more simplistic stochastic SIR models for conspecific density vs. rec. rate combinations tested in spatially-explicit model. Assume homogenous mixing and no landscape structure.
 
 #Load libraries
-
+Load `deSolve` library for evaluating ordinary differntial equations (ODEs).
 ```{r setup}
 library(deSolve)
+library(ggplot2)
+library(cowplot)
 ```
 
 ## Deterministic SIR Model
@@ -25,6 +27,7 @@ n.initial <- round(density*dim^2) # inital population size
 init <- c(S = n.initial-1, I = 1, R = 0)
 times <- seq(0, 1000, by = 1) #1000 time steps
 
+#frequency dependent transmission
 freq_sir <- function(time, state, parameters) {
     with(as.list(c(state, parameters)), {
         dS = -beta * S * I/16512  # The change in S 
@@ -34,6 +37,7 @@ freq_sir <- function(time, state, parameters) {
     })
 }
 
+#density dependent transmission function
 density_sir <- function(time, state, parameters) {
     with(as.list(c(state, parameters)), {
         dS = -beta * S * I/257  # The change in S 
@@ -60,7 +64,7 @@ lines(out_density[, "time"], out_density[, "I"]/n.initial, col="red")
 ```
 
 ## Stochastic SIR Model 
-
+Develop functions to run equivalent stochastic SIR model that assumes density-dependent transmission, homogenous mixing, and operates using a Reed Frost model.
 ```{r}
 #' Function to randomly generate individuals and randomly assign 'nI' number of infected
 #' individuals at t=0
@@ -173,8 +177,15 @@ SIR_simple_function<-function(maxtime, nsim, k, density, inf_prob, rec_rate){
 }
   
 
+```
+
+##Run stochastic simulations
+Run simplified SIR model for six combinations of conspecific density and recovery rate tested in spatially explicit model.
+
+```{r}
 # tic=Sys.time()
 setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
+
 
 #SIR_simple_function<-function(maxtime, nsim, k, density, inf_prob, rec_rate)
 SIR_simple_function(1000, 100, 8, 0.25, 0.2, 0.1)
@@ -187,8 +198,13 @@ SIR_simple_function(1000, 100, 8, 0.5, 0.2, 0.4)
 # print(difftime(Sys.time(),tic,units="mins"))
 
 ```
-Plot deterministic and stochastic SIR results (assuming equal mixing)
+
+##Plot deterministic and stochastic SIR results (assuming equal mixing)
+Compare/verify output from deterministic ODE and stochastic SIR models
 ```{r}
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
+#set wd to location of stochastic SIR simulation output files
+
 par(mfrow=c(2, 3))
 k<-8
 dim<-2^k + 1
@@ -203,7 +219,7 @@ init <- c(S = n.initial25-1, I = 1, R = 0)
 times <- seq(0, 100, by = 1) #1000 time steps
 
 stoch<-read.csv("k8dens0.25inf0.2rec0.1_infected.csv")
-out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.1))
+out <- ode(y = init, func = density_sir, times = times, parms = c(beta = 0.2, gamma = 0.1))
 head(out)
 
 plot(out[, "time"], out[, "I"]/n.initial25, type = "l", lwd = 10, col = "green", xlab = "Time", 
@@ -215,7 +231,7 @@ title("density=0.25;beta=0.2;gamma=0.1")
 
 
 stoch<-read.csv("k8dens0.25inf0.2rec0.2_infected.csv")
-out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.2))
+out <- ode(y = init, func = density_sir, times = times, parms = c(beta = 0.2, gamma = 0.2))
 head(out)
 
 plot(out[, "time"], out[, "I"]/n.initial25, type = "l", lwd = 10, col = "green", xlab = "Time", 
@@ -226,7 +242,7 @@ lines(stoch$X, stoch[,i+1]/n.initial25, col = "red", lwd = 1)
 title("density=0.25;beta=0.2;gamma=0.2")
 
 stoch<-read.csv("k8dens0.25inf0.2rec0.4_infected.csv")
-out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.4))
+out <- ode(y = init, func = density_sir, times = times, parms = c(beta = 0.2, gamma = 0.4))
 head(out)
 
 plot(out[, "time"], out[, "I"]/n.initial25, type = "l", lwd = 10, col = "green", xlab = "Time", 
@@ -241,7 +257,7 @@ init <- c(S = n.initial50-1, I = 1, R = 0)
 times <- seq(0, 100, by = 1) #1000 time steps
 
 stoch<-read.csv("k8dens0.5inf0.2rec0.1_infected.csv")
-out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.1))
+out <- ode(y = init, func = density_sir, times = times, parms = c(beta = 0.2, gamma = 0.1))
 head(out)
 
 plot(out[, "time"], out[, "I"]/n.initial50, type = "l", lwd = 10, col = "green", xlab = "Time", 
@@ -253,7 +269,7 @@ title("density=0.5;beta=0.2;gamma=0.1")
 
 
 stoch<-read.csv("k8dens0.5inf0.2rec0.2_infected.csv")
-out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.2))
+out <- ode(y = init, func = density_sir, times = times, parms = c(beta = 0.2, gamma = 0.2))
 head(out)
 
 plot(out[, "time"], out[, "I"]/n.initial50, type = "l", lwd = 10, col = "green", xlab = "Time", 
@@ -264,7 +280,7 @@ lines(stoch$X, stoch[,i+1]/n.initial50, col = "red", lwd = 1)
 title("density=0.5;beta=0.2;gamma=0.2")
 
 stoch<-read.csv("k8dens0.5inf0.2rec0.4_infected.csv")
-out <- ode(y = init, func = sir, times = times, parms = c(beta = 0.2, gamma = 0.4))
+out <- ode(y = init, func = density_sir, times = times, parms = c(beta = 0.2, gamma = 0.4))
 head(out)
 
 plot(out[, "time"], out[, "I"]/n.initial50, type = "l", lwd = 10, col = "green", xlab = "Time", 
@@ -293,13 +309,14 @@ infecteds<-filenames[grep("infect", filenames)] #I data
 
 ##Make a merged dataset from all available .csv files
 SIRdata_merged<- do.call("rbind", lapply(summaries, read.csv, header = TRUE))
-#setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/")
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/")
+write.csv(SIRdata_merged, file="SIRdata_merged.csv")
 
 ```
 
 
 ##Box plots
-Box plots comparing density and recovery rates
+Box plots comparing density and recovery rates for homogenous mixing SIR model
 ```{r}
 setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
 #sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
@@ -327,7 +344,7 @@ hh<- hh + theme(axis.text.x = element_text(vjust=0.5, size=16))
 hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
 hh<- hh + theme(strip.text = element_text(vjust=0.5, size=14))
 hh<- hh + stat_summary(fun.y=mean, colour="darkred", geom="point", 
-                           shape=18, size=3,show_guide = FALSE)
+                           shape=18, size=3,show.legend = FALSE)
 hh<-hh + geom_text(data = means , aes(label = duration, y = duration + 0.08))
 hh
 #dev.off()
@@ -338,10 +355,15 @@ dev.off()
 
 ```
 
-##Box plot
-Compare homogenous mixing and spatial models
+##Fig. S6
+Compare homogenous mixing and spatial models in box plot form.
 ```{r}
-SIRdata_merged$percep<-"Homogenous"
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/")
+SIRdata_merged<-read.csv("SIRdata_merged.csv")
+SIRdata_merged<-SIRdata_merged[,-1]
+
+
+SIRdata_merged$percep<-"H"
 SIRdata_merged$p<-NA
 SIRdata_merged$H<-NA
 SIRdata_merged$beta1<-NA
@@ -353,14 +375,17 @@ SIRdata_merged$Hurst<-NA
 SIRdata_merged$proportion<-NA
 SIRdata_merged$lstructure<-NA
 
-h_vs_s <-rbind(sub_data, SIRdata_merged)
+h_vs_s <-rbind(merged_data, SIRdata_merged)
 hh <- ggplot(h_vs_s, aes(x = as.factor(rec_rate), y = max_prevalence, fill = percep))
 hh<-hh+ geom_boxplot()+ facet_grid(. ~ density, scales= "free_x", labeller=label_both)
-hh<- hh+ labs(fill= "Perceptual \ndistance", x = expression(Recovery~rate~(gamma)), y = "Maximum prevalence", title="(A)")
-hh<- hh+ theme(axis.title = element_text(face="bold", size=16), title=element_text(face="bold", size=16))
-hh<- hh + theme(axis.text.x = element_text(vjust=0.5, size=16))
-hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
-hh<- hh + theme(strip.text = element_text(vjust=0.5, size=14))
+hh<- hh+ labs(fill= "Perceptual \ndistance", x = expression(Recovery~rate~(gamma)), y = "Maximum prevalence")#, title="(A)")
+hh<- hh+ theme(axis.title = element_text(size=6), plot.title=element_text(size=7))
+hh<- hh + theme(axis.text.x = element_text(vjust=0.5, size=6))
+hh<- hh + theme(axis.text.y = element_text(vjust=0.5, size=6)) 
+hh<- hh + theme(strip.text = element_text(vjust=0.5, size=6))
+hh<- hh + theme(legend.position="none")
+hh<- hh + theme(legend.text = element_text(vjust=0.5, size=6), legend.title=element_text(vjust=0.5, size=7))
+hh<- hh +theme(plot.margin=unit(c(0.1,0.1,0,0.1),"cm"))
 #hh<- hh + stat_summary(fun.y=mean, colour="darkred", geom="point", 
                            #shape=18, size=3,show_guide = FALSE)
 #hh<-hh + geom_text(data = means , aes(label = duration, y = duration + 0.08))
@@ -368,18 +393,45 @@ hh
 
 ii <- ggplot(h_vs_s, aes(x = as.factor(rec_rate), y = duration, fill = percep))
 ii<-ii+ geom_boxplot()+ facet_grid(. ~ density, scales= "free_x", labeller=label_both)
-ii<- ii+ labs(fill= "Perceptual \ndistance", x = expression(Recovery~rate~(gamma)), y = "Duration", title="(B)")
-ii<- ii+ theme(axis.title = element_text(face="bold", size=16), title=element_text(face="bold", size=16))
-ii<- ii + theme(axis.text.x = element_text(vjust=0.5, size=16))
-ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=16)) 
-ii<- ii + theme(strip.text = element_text(vjust=0.5, size=14))
+ii<- ii+ labs(fill= "Perceptual \ndistance", x = expression(Recovery~rate~(gamma)), y = "Duration") #, title="(B)")
+ii<- ii+ theme(axis.title = element_text(size=6), plot.title=element_text(size=7))
+ii<- ii + theme(axis.text.x = element_text(vjust=0.5, size=6))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=6)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=6))
+ii<- ii + theme(legend.position="bottom")
+ii<- ii + theme(legend.text = element_text(vjust=0.5, size=6), legend.title=element_text(vjust=0.5, size=7))
+ii<- ii +theme(plot.margin=unit(c(-0.1,0.1,-0.5,0.1),"cm"))
 #ii<- ii + stat_summary(fun.y=mean, colour="darkred", geom="point", 
                            #shape=18, size=3,show_guide = FALSE)
 #ii<-ii + geom_text(data = means , aes(label = duration, y = duration + 0.08))
 ii
+ 
+#install.packages("ggpubr")
+#library("ggpubr")
+#ggarrange(hh, ii, ncol=2, nrow=1, common.legend = TRUE, legend="bottom")
 
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
-tiff("Compare_homog_spatial.tif", height = 8, width = 14, units = "in", compression = "lzw", res = 300)
-multiplot(hh,ii, cols=2)
+library(cowplot)
+prow <- plot_grid( hh + theme(legend.position="none"),
+            ii + theme(legend.position="none"),
+           align = 'vh',
+           labels = c("(A)", "(B)"),
+           hjust = -1,
+           nrow = 2, label_size=7
+           )
+
+# extract the legend from one of the plots
+# (clearly the whole thing only makes sense if all plots
+# have the same legend, so we can arbitrarily pick one.)
+legend_b <- get_legend(ii + theme(legend.position="bottom"))
+
+# add the legend underneath the row we made earlier. Give it 10% of the height
+# of one plot (via rel_heights).
+p <- plot_grid( prow, legend_b, ncol = 1, rel_heights = c(1, .07))
+p
+
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
+tiff("FigureS6.tiff", height = 17, width = 17,8, units = "cm", compression = "lzw", res = 1200)
+p
+#multiplot(hh,ii, cols=1)
 dev.off()
 ```
