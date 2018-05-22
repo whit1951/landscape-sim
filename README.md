@@ -9,7 +9,7 @@ This repository contains files to run movement simulations and analyze resulting
 4) *RandomForestParallelLogit.R*- random forest analysis to test- is an outbreak successful?
 5) *RandomForestParallelLogitDur.R*- given a successful outbreak- what determines outbreak duration?
 *RandomForestParallelLogitPrev.R*- given a successful outbreak- what determines maximum prevalence?
-6) *SimpleSIR.Rmd*- compare spatially-explicit simulations to comparable stochastic model that assumes homogeneous mixing (produces Figure S6)
+6) *SimpleSIR.Rmd*- compare spatially-explicit simulations to comparable stochastic model that assumes homogeneous mixing (produces Figure S7)
 7) *PartyRFLogit.R*- random forest analysis (using `cforest` function from `party` package) to test- is an outbreak successful?
 8) *PartyRFLogitPrev.R*-random forest analysis (using `cforest` function from `party` package) to test- is an outbreak successful?
 9) *PartyRFLogitDur.R*- random forest analysis (using `cforest` function from `party` package) to test-  what determines outbreak duration?
