@@ -7,7 +7,7 @@ output: html_document
 
 Deterministic and more simplistic stochastic SIR models for conspecific density vs. rec. rate combinations tested in spatially-explicit model. Assume homogenous mixing and no landscape structure.
 
-#Load libraries
+## Load libraries
 Load `deSolve` library for evaluating ordinary differntial equations (ODEs).
 ```{r setup}
 library(deSolve)
@@ -179,7 +179,7 @@ SIR_simple_function<-function(maxtime, nsim, k, density, inf_prob, rec_rate){
 
 ```
 
-##Run stochastic simulations
+## Run stochastic simulations
 Run simplified SIR model for six combinations of conspecific density and recovery rate tested in spatially explicit model.
 
 ```{r}
@@ -199,7 +199,7 @@ SIR_simple_function(1000, 100, 8, 0.5, 0.2, 0.4)
 
 ```
 
-##Plot deterministic and stochastic SIR results (assuming equal mixing)
+## Plot deterministic and stochastic SIR results (assuming equal mixing)
 Compare/verify output from deterministic ODE and stochastic SIR models
 ```{r}
 setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
@@ -292,7 +292,7 @@ title("density=0.5;beta=0.2;gamma=0.4")
 ```
 
 
-##Combine simulation ouput
+## Combine simulation ouput
 ```{r}
 library(doBy)
 library(ggplot2)
@@ -315,7 +315,7 @@ write.csv(SIRdata_merged, file="SIRdata_merged.csv")
 ```
 
 
-##Box plots
+## Box plots
 Box plots comparing density and recovery rates for homogenous mixing SIR model
 ```{r}
 setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
@@ -355,7 +355,7 @@ dev.off()
 
 ```
 
-##Fig. S6
+## Fig. S7
 Compare homogenous mixing and spatial models in box plot form.
 ```{r}
 setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/")
