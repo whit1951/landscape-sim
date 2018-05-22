@@ -19,7 +19,7 @@ library(cowplot)
 
 ## Load and update summary dataset
 ```{r}
-setwd("C:/Users/law2y/OneDrive/R Code/IBM/August 2017")
+#setwd()
 merged_data<-read.csv("IBMsummary.csv")
 merged_data<-merged_data[-which(merged_data$beta2==5),] #remove saturating beta_2 values
 
@@ -40,7 +40,7 @@ merged_data$betas<- factor(merged_data$betas, levels = c("0 0 0", "0 0 -1", "0 1
 merged_data$lstructure<- factor(merged_data$lstructure, levels = c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
 
 #Set working directory of where to produce Figures
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
+setwd()
 ```
 
 ## Define multiplot function
@@ -97,7 +97,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 Random forest variable importance results
 ```{r}
 library(randomForest)
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
+#setwd()
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("imp_logit.csv")
@@ -200,7 +200,7 @@ dev.off()
 Random forest variable importance results
 ```{r}
 library(randomForest)
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
+#setwd()
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("imp_logit.csv")
@@ -301,7 +301,7 @@ prow <- plot_grid(A, B, C,
 #paxis <- axis_canvas(prow, axis = "y") 
 #ggdraw(insert_yaxis_grob(prow, paxis, grid::unit(.25, "null")))
 
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures May 2018")
+#setwd()
 tiff("Figure1_RFvert.tiff", height =4.5, width =8.7, units = "cm", compression = "lzw", res = 1200)
 #multiplot(A, B, C, cols=3)
 prow
@@ -312,7 +312,7 @@ dev.off()
 ## Figure 2
 Box plots rec rate vs. density
 ```{r}
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
+#setwd()
 sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
 colnames(sub_data)[3]<-"d" #rename density as "d"
 colnames(sub_data)[11]<-"r" #rename perceptual range as "r"
@@ -481,7 +481,7 @@ dev.off()
 ## Figure S1
 Random forest variable importance results from `party` package using cforest function
 ```{r}
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Party Package May 2018")
+#setwd()
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("partyRF_logit1000.csv")
@@ -562,7 +562,7 @@ prow <- plot_grid(A, B, C,
 #paxis <- axis_canvas(prow, axis = "y") 
 #ggdraw(insert_yaxis_grob(prow, paxis, grid::unit(.25, "null")))
 
-setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures May 2018")
+#setwd()
 tiff("FigureS1_party.tiff", height =4.5, width =8.7, units = "cm", compression = "lzw", res = 1200)
 #multiplot(A, B, C, cols=3)
 prow
