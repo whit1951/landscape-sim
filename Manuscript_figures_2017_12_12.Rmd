@@ -19,7 +19,7 @@ library(cowplot)
 
 ## Load and update summary dataset
 ```{r}
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/IBM/August 2017")
 merged_data<-read.csv("IBMsummary.csv")
 merged_data<-merged_data[-which(merged_data$beta2==5),] #remove saturating beta_2 values
 
@@ -40,7 +40,7 @@ merged_data$betas<- factor(merged_data$betas, levels = c("0 0 0", "0 0 -1", "0 1
 merged_data$lstructure<- factor(merged_data$lstructure, levels = c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
 
 #Set working directory of where to produce Figures
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
 ```
 
 ## Define multiplot function
@@ -97,7 +97,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 Random forest variable importance results
 ```{r}
 library(randomForest)
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("imp_logit.csv")
@@ -189,7 +189,7 @@ C<-ggplot(imp_logitdur, aes(x=reorder(X, X.IncMSE), y=X.IncMSE)) +
     coord_flip()
 C
 
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
 tiff("Figure1_RF.tiff", height =10 , width =8.7, units = "cm", compression = "lzw", res = 1200)
 multiplot(A, B, C, cols=1)
 dev.off()
@@ -200,7 +200,7 @@ dev.off()
 Random forest variable importance results
 ```{r}
 library(randomForest)
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("imp_logit.csv")
@@ -240,7 +240,7 @@ A<-ggplot(imp_logit, aes(x=reorder(X, X.IncMSE), y=X.IncMSE)) +
     scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
     "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
     "percep" = "r", "density"="d")) +
-     ylab("Mean Decrease in Accuracy (%IncMSE)") +
+     ylab("Mean Decrease in Accuracy") +
     #ylab("")+
     theme_bw()+ theme(plot.margin = unit(c(0.1, 0, 0, 0), "cm"))+
     #ggtitle("(A)") + #" Variable Importance for Epidemic \nSuccess") +
@@ -301,7 +301,7 @@ prow <- plot_grid(A, B, C,
 #paxis <- axis_canvas(prow, axis = "y") 
 #ggdraw(insert_yaxis_grob(prow, paxis, grid::unit(.25, "null")))
 
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures May 2018")
 tiff("Figure1_RFvert.tiff", height =4.5, width =8.7, units = "cm", compression = "lzw", res = 1200)
 #multiplot(A, B, C, cols=3)
 prow
@@ -312,7 +312,7 @@ dev.off()
 ## Figure 2
 Box plots rec rate vs. density
 ```{r}
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
 sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
 colnames(sub_data)[3]<-"d" #rename density as "d"
 colnames(sub_data)[11]<-"r" #rename perceptual range as "r"
@@ -478,7 +478,99 @@ dev.off()
 ```
 
 
-## Supplementary Figure S1
+## Figure S1
+Random forest variable importance results from `party` package using cforest function
+```{r}
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Party Package May 2018")
+
+#Load importance values (not scaled by SD)
+imp_logit<-read.csv("partyRF_logit1000.csv")
+imp_logitprev<-read.csv("partyRF_logitprev1000.csv")
+imp_logitdur<-read.csv("partyRF_logitdur1000.csv")
+
+
+#imp_logit$SD<-rep(0.005, times=nrow(imp_logit))
+A<-ggplot(imp_logit, aes(x=reorder(X, x), y=x)) + 
+    geom_bar(position=position_dodge(), stat="identity",
+             colour="black", # Use black outlines,
+             size=.3) +      # Thinner lines
+    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
+    #               size=.3,    # Thinner lines
+    #               width=.2,
+    #               position=position_dodge(.9)) +
+    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
+    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
+    "percep" = "r", "density"="d")) +
+     ylab("Mean Decrease in Accuracy") +
+    #ylab("")+
+    theme_bw()+ theme(plot.margin = unit(c(0.1, 0, 0, 0), "cm"))+
+    #ggtitle("(A)") + #" Variable Importance for Epidemic \nSuccess") +
+    theme(axis.text=element_text(size=6), plot.title = element_text(size = 8), axis.title=element_text(size=6)) 
+    #theme(plot.margin=unit(c(0.1,0.1,0,0), "cm"))
+    # theme_bw(axis.text=element_text(size=14),    axis.title=element_text(size=14,face="bold"), plot.title = element_text(size = 40))
+A
+
+#imp_logitprev$SD<-rep(0.0000001, times=nrow(imp_logitprev))
+B<-ggplot(imp_logitprev, aes(x=reorder(X, x), y=x)) + 
+    geom_bar(position=position_dodge(), stat="identity",
+             colour="black", # Use black outlines,
+             size=.3) +      # Thinner lines
+    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
+    #               size=.3,    # Thinner lines
+    #               width=.2,
+    #               position=position_dodge(.9)) +
+    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
+    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
+    "percep" = "r", "density"="d")) +
+     #ylab("Mean Decrease in Accuracy") +
+    ylab(NULL)+
+    theme_bw()+ theme(plot.margin = unit(c(0.25, 0, 0, 0), "cm"))+
+    #ggtitle("(B)") + #" Variable Importance for Maximum \nPrevalence|Success") +
+    theme(axis.text=element_text(size=6), plot.title = element_text(size = 8))
+    #theme(plot.margin=unit(c(-0.25,0.1,0,0), "cm"))
+    #coord_flip()
+B
+
+#imp_logitdur$SD<-rep(100, times=nrow(imp_logitdur))
+C<-ggplot(imp_logitdur, aes(x=reorder(X, x), y=x)) + 
+    geom_bar(position=position_dodge(), stat="identity",
+             colour="black", # Use black outlines,
+             size=.3) +      # Thinner lines
+    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
+    #               size=.3,    # Thinner lines
+    #               width=.2,
+    #               position=position_dodge(.9)) +
+    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
+    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
+    "percep" = "r", "density"="d")) +
+    #ylab("Mean Decrease in Accuracy") +
+    ylab(NULL)+
+    theme_bw()+ theme(plot.margin = unit(c(0.1, 0, 0, 0), "cm"))+
+    #ggtitle("(C)") + #" Variable Importance for Epidemic \nDuration|Success") +
+    
+      theme(axis.text=element_text(size=6), plot.title = element_text(size = 8), axis.title.x=element_text(size=7)) 
+    #theme(plot.margin=unit(c(-0.25,0.1,0,0), "cm"))
+    #coord_flip()
+C
+
+prow <- plot_grid(A, B, C,
+           align = 'vh',
+           labels = c("(A)", "(B)", "(C)"),
+           hjust = -0.75,
+           ncol = 3, label_size=7
+           )
+#paxis <- axis_canvas(prow, axis = "y") 
+#ggdraw(insert_yaxis_grob(prow, paxis, grid::unit(.25, "null")))
+
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures May 2018")
+tiff("FigureS1_party.tiff", height =4.5, width =8.7, units = "cm", compression = "lzw", res = 1200)
+#multiplot(A, B, C, cols=3)
+prow
+dev.off()
+
+```
+
+## Supplementary Figure S2
 Box plot of percep vs. rec rate vs. density for every RSF combination
 ```{r}
 sub_data<-merged_data[which(merged_data$max_I>1),]
@@ -544,7 +636,7 @@ dev.off()
 
 ```
 
-## Supplementary Figure S2 (Heat maps, density=0.25)
+## Supplementary Figure S3 (Heat maps, density=0.25)
 Heatmap of max prevelance and mean duration for conspecific density=0.25 and comparing recovery rates of 0.1, 0.2, and 0.4
 ```{r}
 r2<-merged_data[which(merged_data$rec_rate==0.2 & merged_data$density==0.25),]
@@ -642,13 +734,13 @@ mm<- mm + theme(legend.text = element_text(vjust=0.5, size=14), legend.title=ele
 mm
 
 
-tiff("FigureS4_heatmap.tiff", height = 27, width = 14, units = "in", compression = "lzw", res = 300)
+tiff("FigureS3_heatmap.tiff", height = 27, width = 14, units = "in", compression = "lzw", res = 300)
 multiplot(ii,jj,hh,gg, kk,mm, cols=1)
 dev.off()
 ```
 
 
-## Supplementary Figure S3 (Heat maps, density=0.5)
+## Supplementary Figure S4 (Heat maps, density=0.5)
 Heatmap of max prevelance and mean duration for conspecific density=0.5 and comparing recovery rates of 0.1, 0.2, and 0.4
 ```{r}
 r2<-merged_data[which(merged_data$rec_rate==0.2 & merged_data$density==0.5),]
@@ -746,13 +838,13 @@ mm<- mm + theme(legend.text = element_text(vjust=0.5, size=14), legend.title=ele
 mm
 
 
-tiff("FigureS3_heatmap.tiff", height = 27, width = 14, units = "in", compression = "lzw", res = 300)
+tiff("FigureS4_heatmap.tiff", height = 27, width = 14, units = "in", compression = "lzw", res = 300)
 multiplot(ii,jj,hh,gg, kk,mm, cols=1)
 dev.off()
 ```
 
 
-## Figure S4
+## Figure S5
 ```{r}
 #percep=3, rec_rate=0.2, density=0.5
 p3r0.2d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.2 & merged_data$density==0.5),]
@@ -783,12 +875,12 @@ jj<- jj + theme(plot.margin=unit(c(-0.1,0.1,0,0.1), "cm"))
 
 jj
 
-tiff("FigureS4.tiff", height = 22.5, width = 17.8, units = "cm", compression = "lzw", res = 900)
+tiff("FigureS5.tiff", height = 22.5, width = 17.8, units = "cm", compression = "lzw", res = 900)
 multiplot(ii,jj, cols=1)
 dev.off()
 ```
 
-##Figure S4 (log version)
+##Figure S5 (log version)
 ```{r}
 #percep=3, rec_rate=0.2, density=0.5
 p3r0.2d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.2 & merged_data$density==0.5),]
@@ -818,13 +910,13 @@ jj<- jj + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
 jj<- jj + theme(plot.margin=unit(c(-0.1,0.1,0,0.1), "cm"))
 jj
 
-tiff("FigS4_log.tiff", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
+tiff("FigS5_log.tiff", height = 11.5, width = 14, units = "in", compression = "lzw", res = 300)
 multiplot(ii,jj, cols=1)
 dev.off()
 ```
 
 
-## Fig. S5
+## Fig. S6
 Comparing effects on landscape structure for a single RSF(\beta_1=6, \beta_2=2, \beta_3=-0.5) for different densities, perceptual distances, and recovery rates.
 ```{r}
 #sub_data<-merged_data[which(merged_data$max_I>1),]
@@ -953,16 +1045,16 @@ mm<- mm + theme(strip.text = element_text(vjust=0.5, size=6))
 #mm<-mm +theme (axis.text.x = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")), axis.text.y = element_text(margin=unit(c(0.15,0.15,0.15,0.15), "cm")))
 mm
 
-tiff("FigureS5.tiff", height = 22, width = 17.8, units = "cm", compression = "lzw", res = 1200)
+tiff("FigureS6.tiff", height = 22, width = 17.8, units = "cm", compression = "lzw", res = 1200)
 multiplot(kk,mm,gg,hh,ii,jj, cols=2)
 dev.off()
 
 ```
 
-## Supplementary Figure S6
+## Supplementary Figure S7
 See SimpleSIR.Rmd
 
-##Supplementary Figure S7: Calibrating beta2/beta3 for RSF
+##Supplementary Figure S8: Calibrating beta2/beta3 for RSF
 ```{r}
 #Function to calculate rsf
 myrsf=function(x,b1,b2) exp(x*b1+x^2*b2)   #caclulate rsf
@@ -1089,7 +1181,7 @@ multiplot(A,B,C,D,E,F, cols=2)
 dev.off()
 ```
 
-## Figure S8
+## Figure S9
 Representation of neutral landscapes used for simulation studies
 ```{r}
 #' Create neutral landscape maps
@@ -1261,7 +1353,7 @@ my_y_title <- expression(paste("Proportion of available habitat (", italic("p"),
 
 
 #Now make the map
-tiff("FigureS7_p_vs_H.tif", height = 8.7, width = 8.7, units = "cm", compression = "lzw", res = 900)
+tiff("FigureS9_p_vs_H.tif", height = 8.7, width = 8.7, units = "cm", compression = "lzw", res = 900)
 ggplot(data=df, aes(y=y, x=x)) +
   geom_raster(aes(fill=layer)) +
     theme_bw() +
@@ -1281,94 +1373,3 @@ dev.off()
 ```
 
 
-## Figure S9
-Random forest variable importance results from `party` package using cforest function
-```{r}
-#setwd()
-
-#Load importance values (not scaled by SD)
-imp_logit<-read.csv("partyRF_logit1000.csv")
-imp_logitprev<-read.csv("partyRF_logitprev1000.csv")
-imp_logitdur<-read.csv("partyRF_logitdur1000.csv")
-
-
-#imp_logit$SD<-rep(0.005, times=nrow(imp_logit))
-A<-ggplot(imp_logit, aes(x=reorder(X, x), y=x)) + 
-    geom_bar(position=position_dodge(), stat="identity",
-             colour="black", # Use black outlines,
-             size=.3) +      # Thinner lines
-    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
-    #               size=.3,    # Thinner lines
-    #               width=.2,
-    #               position=position_dodge(.9)) +
-    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
-    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
-    "percep" = "r", "density"="d")) +
-     ylab("Mean Decrease in Accuracy") +
-    #ylab("")+
-    theme_bw()+ theme(plot.margin = unit(c(0.1, 0, 0, 0), "cm"))+
-    #ggtitle("(A)") + #" Variable Importance for Epidemic \nSuccess") +
-    theme(axis.text=element_text(size=6), plot.title = element_text(size = 8), axis.title=element_text(size=6)) 
-    #theme(plot.margin=unit(c(0.1,0.1,0,0), "cm"))
-    # theme_bw(axis.text=element_text(size=14),    axis.title=element_text(size=14,face="bold"), plot.title = element_text(size = 40))
-A
-
-#imp_logitprev$SD<-rep(0.0000001, times=nrow(imp_logitprev))
-B<-ggplot(imp_logitprev, aes(x=reorder(X, x), y=x)) + 
-    geom_bar(position=position_dodge(), stat="identity",
-             colour="black", # Use black outlines,
-             size=.3) +      # Thinner lines
-    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
-    #               size=.3,    # Thinner lines
-    #               width=.2,
-    #               position=position_dodge(.9)) +
-    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
-    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
-    "percep" = "r", "density"="d")) +
-     #ylab("Mean Decrease in Accuracy") +
-    ylab(NULL)+
-    theme_bw()+ theme(plot.margin = unit(c(0.25, 0, 0, 0), "cm"))+
-    #ggtitle("(B)") + #" Variable Importance for Maximum \nPrevalence|Success") +
-    theme(axis.text=element_text(size=6), plot.title = element_text(size = 8))
-    #theme(plot.margin=unit(c(-0.25,0.1,0,0), "cm"))
-    #coord_flip()
-B
-
-#imp_logitdur$SD<-rep(100, times=nrow(imp_logitdur))
-C<-ggplot(imp_logitdur, aes(x=reorder(X, x), y=x)) + 
-    geom_bar(position=position_dodge(), stat="identity",
-             colour="black", # Use black outlines,
-             size=.3) +      # Thinner lines
-    # geom_errorbar(aes(ymin=X.IncMSE-SD, ymax=X.IncMSE+SD),
-    #               size=.3,    # Thinner lines
-    #               width=.2,
-    #               position=position_dodge(.9)) +
-    scale_x_discrete(element_blank(), labels = c("rec_rate" = expression(gamma),
-    "beta1" =  expression(beta[1]),"beta2" = expression(beta[2]), "beta3" = expression(beta[3]),
-    "percep" = "r", "density"="d")) +
-    #ylab("Mean Decrease in Accuracy") +
-    ylab(NULL)+
-    theme_bw()+ theme(plot.margin = unit(c(0.1, 0, 0, 0), "cm"))+
-    #ggtitle("(C)") + #" Variable Importance for Epidemic \nDuration|Success") +
-    
-      theme(axis.text=element_text(size=6), plot.title = element_text(size = 8), axis.title.x=element_text(size=7)) 
-    #theme(plot.margin=unit(c(-0.25,0.1,0,0), "cm"))
-    #coord_flip()
-C
-
-prow <- plot_grid(A, B, C,
-           align = 'vh',
-           labels = c("(A)", "(B)", "(C)"),
-           hjust = -0.75,
-           ncol = 3, label_size=7
-           )
-#paxis <- axis_canvas(prow, axis = "y") 
-#ggdraw(insert_yaxis_grob(prow, paxis, grid::unit(.25, "null")))
-
-#setwd()
-tiff("FigureS9_party.tiff", height =4.5, width =8.7, units = "cm", compression = "lzw", res = 1200)
-#multiplot(A, B, C, cols=3)
-prow
-dev.off()
-
-```

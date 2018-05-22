@@ -184,7 +184,7 @@ Run simplified SIR model for six combinations of conspecific density and recover
 
 ```{r}
 # tic=Sys.time()
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
 
 
 #SIR_simple_function<-function(maxtime, nsim, k, density, inf_prob, rec_rate)
@@ -202,7 +202,7 @@ SIR_simple_function(1000, 100, 8, 0.5, 0.2, 0.4)
 ##Plot deterministic and stochastic SIR results (assuming equal mixing)
 Compare/verify output from deterministic ODE and stochastic SIR models
 ```{r}
-setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
 #set wd to location of stochastic SIR simulation output files
 
 par(mfrow=c(2, 3))
@@ -302,14 +302,14 @@ library(scales)
 library(lsr)
 
 ##Read in file names 
-#setwd()
-filenames <- list.files(path = "") #udpate with file path containing simulation data
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
+filenames <- list.files(path = "C:/Users/law2y/OneDrive/R Code/LandscapeCh/SimpleSIR")
 summaries<-filenames[grep("summary", filenames)] #summary data
 infecteds<-filenames[grep("infect", filenames)] #I data
 
 ##Make a merged dataset from all available .csv files
 SIRdata_merged<- do.call("rbind", lapply(summaries, read.csv, header = TRUE))
-#setwd("")
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/")
 write.csv(SIRdata_merged, file="SIRdata_merged.csv")
 
 ```
@@ -318,7 +318,7 @@ write.csv(SIRdata_merged, file="SIRdata_merged.csv")
 ##Box plots
 Box plots comparing density and recovery rates for homogenous mixing SIR model
 ```{r}
-#setwd("")
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures Dec. 2017")
 #sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
 
 #tiff("boxplot_prev.tiff", height = 8, width = 12, units = "in", compression = "lzw", res = 300)
@@ -358,7 +358,7 @@ dev.off()
 ##Fig. S6
 Compare homogenous mixing and spatial models in box plot form.
 ```{r}
-#setwd() #set working directory to folder containing SIRdata_merged.csv
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/")
 SIRdata_merged<-read.csv("SIRdata_merged.csv")
 SIRdata_merged<-SIRdata_merged[,-1]
 
@@ -429,8 +429,8 @@ legend_b <- get_legend(ii + theme(legend.position="bottom"))
 p <- plot_grid( prow, legend_b, ncol = 1, rel_heights = c(1, .07))
 p
 
-#setwd()
-tiff("FigureS6.tiff", height = 17, width = 17,8, units = "cm", compression = "lzw", res = 1200)
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
+tiff("FigureS7.tiff", height = 17, width = 17,8, units = "cm", compression = "lzw", res = 1200)
 p
 #multiplot(hh,ii, cols=1)
 dev.off()
