@@ -19,7 +19,7 @@ library(cowplot)
 
 ## Load and update summary dataset
 ```{r}
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/IBM/August 2017")
 merged_data<-read.csv("IBMsummary.csv")
 merged_data<-merged_data[-which(merged_data$beta2==5),] #remove saturating beta_2 values
 
@@ -40,7 +40,7 @@ merged_data$betas<- factor(merged_data$betas, levels = c("0 0 0", "0 0 -1", "0 1
 merged_data$lstructure<- factor(merged_data$lstructure, levels = c("L/HP", "L/MP", "L/LP", "M/HP", "M/MP", "M/LP", "H/HP", "H/MP", "H/LP"))
 
 #Set working directory of where to produce Figures
-setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
 ```
 
 ## Define multiplot function
@@ -97,7 +97,7 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 Random forest variable importance results
 ```{r}
 library(randomForest)
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("imp_logit.csv")
@@ -200,7 +200,7 @@ dev.off()
 Random forest variable importance results
 ```{r}
 library(randomForest)
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Analysis")
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("imp_logit.csv")
@@ -301,7 +301,7 @@ prow <- plot_grid(A, B, C,
 #paxis <- axis_canvas(prow, axis = "y") 
 #ggdraw(insert_yaxis_grob(prow, paxis, grid::unit(.25, "null")))
 
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures May 2018")
 tiff("Figure1_RFvert.tiff", height =4.5, width =8.7, units = "cm", compression = "lzw", res = 1200)
 #multiplot(A, B, C, cols=3)
 prow
@@ -312,7 +312,7 @@ dev.off()
 ## Figure 2
 Box plots rec rate vs. density
 ```{r}
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures April 2018")
 sub_data<-merged_data[which(merged_data$max_I>1),] #successful outbreaks
 colnames(sub_data)[3]<-"d" #rename density as "d"
 colnames(sub_data)[11]<-"r" #rename perceptual range as "r"
@@ -373,12 +373,12 @@ p3r0.1d0.5<-merged_data[which(merged_data$percep==3 & merged_data$rec_rate==0.1 
 ii<- ggplot(data=p3r0.1d0.5, aes(x=betas, y=max_prevalence,fill=as.factor(beta2)))
 ii<- ii+ geom_boxplot()+ facet_grid( p~ H)
 ii<- ii+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "Maximum prevalence", fill= expression(beta[2]))
-ii<- ii+ theme(plot.title = element_text(size=7))
-ii<- ii+ theme(axis.title = element_text(size=6))
-ii<- ii + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=6))
-ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=6)) 
-ii<- ii + theme(strip.text = element_text(vjust=0.5, size=6)) 
-ii<- ii + theme(legend.text = element_text(vjust=0.5, size=6), legend.title=element_text(vjust=0.5, size=6))
+ii<- ii+ theme(plot.title = element_text(size=12))
+ii<- ii+ theme(axis.title = element_text(size=11))
+ii<- ii + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=10))
+ii<- ii + theme(axis.text.y = element_text(vjust=0.5, size=10)) 
+ii<- ii + theme(strip.text = element_text(vjust=0.5, size=11)) 
+ii<- ii + theme(legend.text = element_text(vjust=0.5, size=11), legend.title=element_text(vjust=0.5, size=11))
 ii<- ii + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
 ii<- ii + theme(plot.margin=unit(c(0.1,0.1,0,0.1), "cm"))
 ii
@@ -386,12 +386,12 @@ ii
 jj<- ggplot(data=p3r0.1d0.5, aes(x=betas, y=duration, fill=as.factor(beta2)))
 jj<- jj+ geom_boxplot()+ facet_grid( p~ H)
 jj<- jj+ labs(x = expression(RSF~(beta[1]~beta[2]~beta[3])), y = "Duration", fill= expression(beta[2]))
-jj<- jj+ theme(plot.title = element_text(size=7))
-jj<- jj+ theme(axis.title = element_text(size=6))
-jj<- jj + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=6))
-jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=6)) 
-jj<- jj + theme(strip.text = element_text(vjust=0.5, size=6)) 
-jj<- jj + theme(legend.text = element_text(vjust=0.5, size=6), legend.title=element_text(vjust=0.5, size=7))
+jj<- jj+ theme(plot.title = element_text(size=12))
+jj<- jj+ theme(axis.title = element_text(size=11))
+jj<- jj + theme(axis.text.x = element_text(angle=90, vjust=0.5, hjust=0, size=10))
+jj<- jj + theme(axis.text.y = element_text(vjust=0.5, size=10)) 
+jj<- jj + theme(strip.text = element_text(vjust=0.5, size=11)) 
+jj<- jj + theme(legend.text = element_text(vjust=0.5, size=11), legend.title=element_text(vjust=0.5, size=11))
 jj<- jj + geom_vline(xintercept=c(6.5,12.5), linetype="dashed")
 jj<- jj + theme(plot.margin=unit(c(-0.1,0.1,0,0.1), "cm"))
 jj
@@ -401,7 +401,7 @@ prow <- plot_grid( ii + theme(legend.position="none"),
            align = 'vh',
            labels = c("(A)", "(B)"),
            hjust = -1,
-           nrow = 2, label_size=7
+           nrow = 2, label_size=11
            )
 
 legend_b <- get_legend(ii + theme(legend.position="bottom"))
@@ -410,7 +410,7 @@ legend_b <- get_legend(ii + theme(legend.position="bottom"))
 p <- plot_grid( prow, legend_b, ncol = 1, rel_heights = c(1, .02))
 p
 
-tiff("Figure3test.tiff", height = 22.7, width = 17.8, units = "cm", compression = "lzw", res = 900)
+tiff("Figure3new.tiff", height = 22.7, width = 17.8, units = "cm", compression = "lzw", res = 900)
 #multiplot(ii,jj, cols=1)
 p
 dev.off()
@@ -481,7 +481,7 @@ dev.off()
 ## Figure S1
 Random forest variable importance results from `party` package using cforest function
 ```{r}
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Random Forest Party Package May 2018")
 
 #Load importance values (not scaled by SD)
 imp_logit<-read.csv("partyRF_logit1000.csv")
@@ -562,7 +562,7 @@ prow <- plot_grid(A, B, C,
 #paxis <- axis_canvas(prow, axis = "y") 
 #ggdraw(insert_yaxis_grob(prow, paxis, grid::unit(.25, "null")))
 
-#setwd()
+setwd("C:/Users/law2y/OneDrive/R Code/LandscapeCh/Figures May 2018")
 tiff("FigureS1_party.tiff", height =4.5, width =8.7, units = "cm", compression = "lzw", res = 1200)
 #multiplot(A, B, C, cols=3)
 prow
