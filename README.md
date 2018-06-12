@@ -1,6 +1,8 @@
 ## landscape-sim
 
-This repository contains files to run movement simulations and analyze resulting data for the manuscript: L.A. White, J.D. Forester & M.E. Craft. "Disease outbreak thresholds emerge from interactions between movement behavior, landscape structure, and epidemiology"
+This repository contains files to run movement simulations and analyze resulting data for the PNAS 2018 manuscript: L.A. White, J.D. Forester & M.E. Craft. "Disease outbreak thresholds emerge from interactions between movement behavior, landscape structure, and epidemiology"
+
+www.pnas.org/cgi/doi/10.1073/pnas.1801383115
 
 ### Scripts:
 1) *sim_parallel_functions.R*- contains IBM_loop_function and sub functions needed to run simulations
